@@ -1,0 +1,335 @@
+name: "Database Migration Tests"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Automated database migration testing, rollback validation, and
+# schema drift detection for the Vesting Vault backend.
+#
+# Triggered on PRs/pushes that modify migrations or models.
+# Validates: apply order, rollback, idempotency, schema drift, naming.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend/migrations/**'
+      - 'backend/src/models/**'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/migrations/**'
+      - 'backend/src/models/**'
+  workflow_dispatch:
+    inputs:
+      skip_schema_drift:
+        description: 'Skip schema drift detection'
+        required: false
+        default: 'false'
+        type: boolean
+
+concurrency:
+  group: migration-test-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  PG_VERSION: '15'
+
+jobs:
+  # ── Validate Migration Naming Convention ──────────────────────────────────
+  naming-check:
+    name: "Migration Naming Convention"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Validate migration file naming
+        run: |
+          echo "Checking migration file naming conventions..."
+          INVALID_NAMES=0
+          DUPLICATE_IDS=0
+
+          for file in backend/migrations/*.sql; do
+            filename=$(basename "$file")
+            # SQL migrations must follow: NNN_descriptive_name.sql
+            if ! [[ "$filename" =~ ^[0-9]{3}_[a-z][a-z0-9_]+\.sql$ ]]; then
+              echo "ERROR: Invalid SQL migration name: $filename"
+              echo "  Expected format: NNN_descriptive_name.sql (e.g., 001_create_vaults.sql)"
+              INVALID_NAMES=$((INVALID_NAMES + 1))
+            fi
+          done
+
+          for file in backend/migrations/*.js; do
+            if [ ! -f "$file" ]; then continue; fi
+            filename=$(basename "$file")
+            # JS migrations must follow: YYYYMMDDHHMMSS-descriptive-name.js
+            if ! [[ "$filename" =~ ^[0-9]{14}-[a-z][a-z0-9-]+\.js$ ]]; then
+              echo "ERROR: Invalid JS migration name: $filename"
+              echo "  Expected format: YYYYMMDDHHMMSS-descriptive-name.js"
+              INVALID_NAMES=$((INVALID_NAMES + 1))
+            fi
+          done
+
+          # Check for duplicate SQL migration numbers
+          echo "Checking for duplicate migration numbers..."
+          DUPES=$(ls backend/migrations/[0-9][0-9][0-9]_*.sql 2>/dev/null | sed 's/.*\///' | cut -c1-3 | sort | uniq -d)
+          if [ -n "$DUPES" ]; then
+            echo "ERROR: Duplicate migration numbers found:"
+            echo "$DUPES" | while read num; do
+              echo "  Number $num is used by:"
+              ls backend/migrations/${num}_*.sql 2>/dev/null | sed 's/.*\//    /'
+            done
+            DUPLICATE_IDS=1
+          fi
+
+          if [ $INVALID_NAMES -gt 0 ] || [ $DUPLICATE_IDS -gt 0 ]; then
+            echo ""
+            echo "FAILED: Found $INVALID_NAMES invalid file name(s) and $DUPLICATE_IDS duplicate migration number(s)"
+            exit 1
+          fi
+          echo "All migration file names are valid."
+
+  # ── Apply, Rollback, and Re-apply Migrations ─────────────────────────────
+  migration-test:
+    name: "Migration Apply / Rollback / Re-apply"
+    runs-on: ubuntu-latest
+    needs: naming-check
+
+    services:
+      postgres:
+        image: postgres:${PG_VERSION}-alpine
+        env:
+          POSTGRES_DB: migration_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Create .env for migration tests
+        working-directory: backend
+        run: |
+          cat > .env << 'EOF'
+          NODE_ENV=test
+          DB_HOST=localhost
+          DB_PORT=5432
+          DB_NAME=migration_test
+          DB_USER=postgres
+          DB_PASSWORD=password
+          JWT_SECRET=migration-test-secret
+          JWT_REFRESH_SECRET=migration-test-refresh-secret
+          EOF
+
+      - name: Run migration test script
+        working-directory: backend
+        run: bash ../scripts/test-migrations.sh
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: password
+          PGDATABASE: migration_test
+
+      - name: Upload migration test log
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: migration-test-log
+          path: /tmp/migration-test-*.log
+          retention-days: 7
+
+  # ── Schema Drift Detection ───────────────────────────────────────────────
+  schema-drift:
+    name: "Schema Drift Detection"
+    runs-on: ubuntu-latest
+    needs: naming-check
+    if: ${{ github.event.inputs.skip_schema_drift != 'true' }}
+
+    services:
+      postgres:
+        image: postgres:${PG_VERSION}-alpine
+        env:
+          POSTGRES_DB: drift_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Create .env
+        working-directory: backend
+        run: |
+          cat > .env << 'EOF'
+          NODE_ENV=test
+          DB_HOST=localhost
+          DB_PORT=5432
+          DB_NAME=drift_test
+          DB_USER=postgres
+          DB_PASSWORD=password
+          EOF
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Apply all migrations
+        working-directory: backend
+        run: |
+          echo "Applying all SQL migrations..."
+          for file in migrations/[0-9]*.sql; do
+            echo "  Running: $file"
+            PGPASSWORD=password psql -h localhost -U postgres -d drift_test -f "$file" -v ON_ERROR_STOP=1
+          done
+          echo "All migrations applied successfully."
+
+      - name: Dump current schema
+        run: |
+          PGPASSWORD=password pg_dump -h localhost -U postgres -d drift_test --schema-only --no-owner --no-privileges > /tmp/current-schema.sql
+          echo "Schema dumped to /tmp/current-schema.sql"
+
+      - name: Compare with known-good schema snapshot
+        run: |
+          SNAPSHOT_FILE="db/schema-snapshot.sql"
+
+          if [ ! -f "$SNAPSHOT_FILE" ]; then
+            echo "No schema snapshot found at $SNAPSHOT_FILE."
+            echo "Creating initial schema snapshot..."
+            mkdir -p db
+            cp /tmp/current-schema.sql "$SNAPSHOT_FILE"
+            echo "Schema snapshot created. This will be used as baseline for future drift detection."
+          else
+            # Normalize both schemas (remove comments, blank lines, whitespace differences)
+            grep -v '^--' /tmp/current-schema.sql | grep -v '^$' | sed 's/[[:space:]]\+/ /g' > /tmp/current-normalized.sql
+            grep -v '^--' "$SNAPSHOT_FILE" | grep -v '^$' | sed 's/[[:space:]]\+/ /g' > /tmp/snapshot-normalized.sql
+
+            if diff -q /tmp/current-normalized.sql /tmp/snapshot-normalized.sql > /dev/null 2>&1; then
+              echo "No schema drift detected. Current schema matches snapshot."
+            else
+              echo "WARNING: Schema drift detected!"
+              echo ""
+              echo "Differences between current schema and snapshot:"
+              diff /tmp/current-normalized.sql /tmp/snapshot-normalized.sql || true
+              echo ""
+              echo "If these changes are intentional, update the snapshot with:"
+              echo "  PGPASSWORD=password pg_dump -h localhost -U postgres -d drift_test --schema-only --no-owner --no-privileges > db/schema-snapshot.sql"
+              exit 1
+            fi
+          fi
+
+      - name: Upload schema dumps
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: schema-drift-report
+          path: |
+            /tmp/current-schema.sql
+            /tmp/current-normalized.sql
+            /tmp/snapshot-normalized.sql
+          retention-days: 7
+
+  # ── Migration Summary Comment ────────────────────────────────────────────
+  migration-summary:
+    name: "Migration Summary"
+    runs-on: ubuntu-latest
+    needs: [migration-test, schema-drift]
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Generate migration summary
+        id: summary
+        run: |
+          echo "Analyzing migrations in this PR..."
+
+          # Find migrations added/modified in this PR
+          ADDED_FILES=$(git diff --name-only --diff-filter=A origin/${{ github.base_ref }}...HEAD -- backend/migrations/ 2>/dev/null || echo "")
+          MODIFIED_FILES=$(git diff --name-only --diff-filter=M origin/${{ github.base_ref }}...HEAD -- backend/migrations/ 2>/dev/null || echo "")
+
+          SUMMARY="## 📊 Migration Summary\n\n"
+
+          if [ -n "$ADDED_FILES" ]; then
+            SUMMARY+="### New Migrations\n\n"
+            echo "$ADDED_FILES" | while read file; do
+              SUMMARY+="- \`$file\`\n"
+            done
+          fi
+
+          if [ -n "$MODIFIED_FILES" ]; then
+            SUMMARY+="### Modified Migrations\n\n"
+            echo "$MODIFIED_FILES" | while read file; do
+              SUMMARY+="- \`$file\`\n"
+            done
+          fi
+
+          if [ -z "$ADDED_FILES" ] && [ -z "$MODIFIED_FILES" ]; then
+            SUMMARY+="No migration files changed in this PR.\n"
+          fi
+
+          # Count total migrations
+          TOTAL_SQL=$(ls backend/migrations/*.sql 2>/dev/null | wc -l)
+          TOTAL_JS=$(ls backend/migrations/*.js 2>/dev/null | wc -l)
+          SUMMARY+="\n**Total migrations:** $TOTAL_SQL SQL + $TOTAL_JS JavaScript\n"
+
+          echo -e "$SUMMARY"
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$SUMMARY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Comment PR with migration summary
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          message: ${{ steps.summary.outputs.summary }}
+          comment-tag: migration-summary
+
+  # ── Gate ─────────────────────────────────────────────────────────────────
+  green-light:
+    name: "Migration Tests — Passed"
+    runs-on: ubuntu-latest
+    needs: [naming-check, migration-test, schema-drift]
+    if: |
+      always() &&
+      needs.naming-check.result == 'success' &&
+      needs.migration-test.result == 'success' &&
+      (needs.schema-drift.result == 'success' || needs.schema-drift.result == 'skipped')
+
+    steps:
+      - name: All migration checks passed
+        run: |
+          echo "╔══════════════════════════════════════════════════════╗"
+          echo "║   ✅  All Migration Checks Passed                    ║"
+          echo "║   ✓ Naming Convention                                ║"
+          echo "║   ✓ Apply / Rollback / Re-apply                      ║"
+          echo "║   ✓ Schema Drift Detection                           ║"
+          echo "╚══════════════════════════════════════════════════════╝"

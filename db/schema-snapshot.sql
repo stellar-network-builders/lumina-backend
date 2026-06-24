@@ -1,0 +1,13 @@
+-- =============================================================================
+-- Schema Snapshot — Vesting Vault Backend
+-- =============================================================================
+-- Generated automatically by CI migration-test workflow.
+-- This file serves as a baseline for schema drift detection.
+--
+-- When intentional schema changes are made (new migrations), re-generate:
+--   PGPASSWORD=password pg_dump -h localhost -U postgres -d vesting_vault \
+--     --schema-only --no-owner --no-privileges > db/schema-snapshot.sql
+--
+-- Last updated: 2026-06-24
+-- =============================================================================
+--

@@ -217,6 +217,21 @@ done
 
 log_success "All $SQL_COUNT SQL migrations re-applied successfully (idempotent)"
 
+# Re-apply JS migrations for idempotency
+if [ "$JS_COUNT" -gt 0 ]; then
+  for migration in $JS_MIGRATIONS; do
+    filename=$(basename "$migration")
+    log_info "Re-applying JS migration: $filename"
+    if node "$migration" 2>&1 | tee -a "$LOG_FILE"; then
+      log_success "Re-applied JS migration: $filename"
+    else
+      log_fail "Failed to re-apply JS migration: $filename"
+      exit 1
+    fi
+  done
+  log_success "All $JS_COUNT JS migrations re-applied successfully (idempotent)"
+fi
+
 # Verify tables exist again after re-apply
 FINAL_TABLE_COUNT=$(run_psql -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" 2>/dev/null | tr -d '[:space:]' || echo "0")
 log_info "Tables after re-apply: $FINAL_TABLE_COUNT"

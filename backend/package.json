@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@apollo/server": "^4.9.5",
+    "@appsignal/opentelemetry-instrumentation-bullmq": "^0.8.0",
     "@aws-sdk/client-secrets-manager": "^3.1043.0",
     "@graphql-tools/schema": "^10.0.33",
     "@nestjs-redis/throttler-storage": "^1.2.0",
@@ -30,7 +31,9 @@
     "@opentelemetry/exporter-jaeger": "^2.7.0",
     "@opentelemetry/exporter-trace-otlp-grpc": "^0.215.0",
     "@opentelemetry/instrumentation-express": "^0.63.0",
+    "@opentelemetry/instrumentation-graphql": "^0.67.0",
     "@opentelemetry/instrumentation-http": "^0.57.0",
+    "@opentelemetry/instrumentation-pg": "^0.71.0",
     "@opentelemetry/resources": "^1.30.0",
     "@opentelemetry/sdk-node": "^0.57.0",
     "@opentelemetry/sdk-trace-node": "^2.7.1",

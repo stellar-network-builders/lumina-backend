@@ -81,6 +81,12 @@ class CircuitBreaker extends EventEmitter {
       if (this.successCount >= 1) { // One success is enough to close the circuit
         this.reset();
         this.emit('stateChange', 'CLOSED');
+        // Record circuit breaker recovery as span event
+        TracingUtils.recordCircuitBreakerEvent('recovered', {
+          state: 'CLOSED',
+          failureCount: this.failureCount,
+          reason: 'Circuit breaker recovered after successful operation',
+        });
         console.log(`🔌 Circuit breaker CLOSED for ${context.name || 'unknown'}`);
       }
     } else {
@@ -102,6 +108,12 @@ class CircuitBreaker extends EventEmitter {
       this.state = 'OPEN';
       this.nextAttempt = Date.now() + this.options.resetTimeout;
       this.emit('stateChange', 'OPEN');
+      // Record half-open failure as span event
+      TracingUtils.recordCircuitBreakerEvent('half_open_failed', {
+        state: 'OPEN',
+        failureCount: this.failureCount,
+        reason: 'Operation failed while circuit was HALF_OPEN',
+      });
       console.log(`🔌 Circuit breaker OPEN again for ${context.name || 'unknown'}`);
     } else if (this.failureCount >= this.options.failureThreshold) {
       // Open the circuit if threshold is reached
@@ -112,6 +124,12 @@ class CircuitBreaker extends EventEmitter {
         failureCount: this.failureCount,
         serviceName: context.serviceName,
         operationName: context.name
+      });
+      // Record circuit opened as span event
+      TracingUtils.recordCircuitBreakerEvent('opened', {
+        state: 'OPEN',
+        failureCount: this.failureCount,
+        reason: `Failure threshold reached: ${this.failureCount}/${this.options.failureThreshold}`,
       });
       console.log(`🔌 Circuit breaker OPEN for ${context.name || 'unknown'} after ${this.failureCount} failures`);
     }

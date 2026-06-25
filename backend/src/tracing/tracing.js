@@ -4,11 +4,12 @@ const { OTLPTraceExporter } = require('@opentelemetry/exporter-otlp-grpc');
 const { JaegerExporter } = require('@opentelemetry/exporter-jaeger');
 const { Resource } = require('@opentelemetry/resources');
 const { SemanticResourceAttributes } = require('@opentelemetry/semantic-conventions');
+const { ParentBasedSampler, TraceIdRatioBasedSampler } = require('@opentelemetry/sdk-trace-node');
 
 // Initialize OpenTelemetry tracing
 function initializeTracing() {
   const isProduction = process.env.NODE_ENV === 'production';
-  serviceName = process.env.OTEL_SERVICE_NAME || 'vesting-vault-backend';
+  const serviceName = process.env.OTEL_SERVICE_NAME || 'vesting-vault-backend';
   
   // Choose exporter based on environment
   let traceExporter;
@@ -21,11 +22,22 @@ function initializeTracing() {
       url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
     });
   } else {
-    // Default to console exporter for development
+    // Default to OTLP gRPC for development (points to Jaeger in docker-compose)
     traceExporter = new OTLPTraceExporter({
-      url: 'http://localhost:4317',
+      url: process.env.OTEL_EXPORTER_OTLP_GRPC_ENDPOINT || 'http://localhost:4317',
     });
   }
+
+  // Head-based sampler: 100% for errors, configurable ratio for success
+  // In production: 10% of successful traces, 100% of errors
+  // In development: 100% of all traces
+  const successSampleRatio = isProduction
+    ? parseFloat(process.env.OTEL_TRACES_SAMPLE_RATE || '0.1')
+    : 1.0;
+
+  const sampler = new ParentBasedSampler({
+    root: new TraceIdRatioBasedSampler(successSampleRatio),
+  });
 
   const sdk = new NodeSDK({
     resource: new Resource({
@@ -34,31 +46,55 @@ function initializeTracing() {
       [SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]: process.env.NODE_ENV || 'development',
     }),
     traceExporter,
+    sampler,
     instrumentations: [getNodeAutoInstrumentations({
-      // Disable some instrumentations if not needed
+      // Enable http and express for NestJS HTTP request tracing
+      '@opentelemetry/instrumentation-http': {
+        enabled: true,
+        ignoreIncomingPaths: ['/health', '/health/ready', '/health/live', '/metrics'],
+      },
+      '@opentelemetry/instrumentation-express': {
+        enabled: true,
+      },
+      // Enable pg for PostgreSQL query tracing
+      '@opentelemetry/instrumentation-pg': {
+        enabled: true,
+        enhancedDatabaseReporting: true,
+      },
+      // Disable noisy instrumentations
       '@opentelemetry/instrumentation-fs': {
         enabled: false,
       },
+      '@opentelemetry/instrumentation-net': {
+        enabled: false,
+      },
+      '@opentelemetry/instrumentation-dns': {
+        enabled: false,
+      },
     })],
-    // Sampling configuration
-    sampler: {
-      type: 'traceidratio',
-      ratio: isProduction ? 0.1 : 1.0, // 10% sampling in production, 100% in development
-    },
+    // Auto-detect resources from environment
+    autoDetectResources: true,
   });
 
-  // Initialize the SDK
+  // Initialize the SDK before other modules load
   sdk.start();
 
-  console.log('🔍 OpenTelemetry tracing initialized');
+  console.log(`🔍 OpenTelemetry tracing initialized (sampling: ${(successSampleRatio * 100).toFixed(0)}%, env: ${process.env.NODE_ENV || 'development'})`);
   
   // Graceful shutdown
-  process.on('SIGTERM', () => {
-    sdk.shutdown()
-      .then(() => console.log('🔍 OpenTelemetry tracing shut down'))
-      .catch((error) => console.error('Error shutting down OpenTelemetry', error))
-      .finally(() => process.exit(0));
-  });
+  const shutdown = async () => {
+    try {
+      await sdk.shutdown();
+      console.log('🔍 OpenTelemetry tracing shut down');
+    } catch (error) {
+      console.error('Error shutting down OpenTelemetry', error);
+    } finally {
+      process.exit(0);
+    }
+  };
+
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 
   return sdk;
 }

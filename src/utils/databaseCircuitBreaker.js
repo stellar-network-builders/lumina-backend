@@ -350,7 +350,19 @@ class DatabaseCircuitBreaker {
    */
   logStateChange(fromState, toState, reason) {
     console.log(`Database Circuit Breaker: ${fromState} -> ${toState} (${reason})`);
-    
+
+    // Record span event for OpenTelemetry tracing
+    try {
+      const TracingUtils = require('../../backend/src/tracing/tracingUtils');
+      TracingUtils.recordCircuitBreakerTransition(fromState, toState, reason, {
+        'circuit_breaker.failure_count': this.failureCount,
+        'circuit_breaker.throttling_level': this.throttlingLevel,
+        'circuit_breaker.active_writes': this.activeWrites,
+      });
+    } catch (err) {
+      // Tracing module may not be initialized yet — degrade gracefully
+    }
+
     if (this.onStateChange) {
       this.onStateChange({
         fromState,

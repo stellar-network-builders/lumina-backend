@@ -2,6 +2,7 @@ const axios = require('axios');
 const Sentry = require('@sentry/node');
 const CircuitBreaker = require('../resilience/circuitBreaker');
 const auditLogger = require('./auditLogger');
+const TracingUtils = require('../tracing/tracingUtils');
 
 /**
  * SorobanRpcClient - Multi-endpoint RPC client with health checking,
@@ -369,39 +370,42 @@ class SorobanRpcClient {
 
     this.metrics.totalCalls++;
 
-    try {
-      const response = await axios.post(endpoint, requestBody, requestOptions);
+    // Wrap the RPC call with OpenTelemetry tracing
+    return TracingUtils.traceSorobanRPCCall(method, params, endpoint, async () => {
+      try {
+        const response = await axios.post(endpoint, requestBody, requestOptions);
 
-      if (response.data.error) {
-        throw new Error(`RPC Error: ${response.data.error.message} (Code: ${response.data.error.code})`);
+        if (response.data.error) {
+          throw new Error(`RPC Error: ${response.data.error.message} (Code: ${response.data.error.code})`);
+        }
+
+        this.metrics.successfulCalls++;
+
+        // Record success in circuit breaker
+        const cb = this.circuitBreakers.get(endpoint);
+        if (cb) {
+          cb.onSuccess({ name: method, serviceName: 'soroban-rpc', endpoint });
+        }
+
+        return response.data.result;
+      } catch (error) {
+        this.metrics.failedCalls++;
+
+        // Record failure in circuit breaker
+        const cb = this.circuitBreakers.get(endpoint);
+        if (cb) {
+          cb.onFailure({ name: method, serviceName: 'soroban-rpc', endpoint });
+        }
+
+        if (error.response) {
+          throw new Error(`HTTP ${error.response.status}: ${error.response.statusText} - ${error.response.data?.message || error.message}`);
+        } else if (error.request) {
+          throw new Error('Network error: Unable to reach Soroban RPC server');
+        } else {
+          throw error;
+        }
       }
-
-      this.metrics.successfulCalls++;
-
-      // Record success in circuit breaker
-      const cb = this.circuitBreakers.get(endpoint);
-      if (cb) {
-        cb.onSuccess({ name: method, serviceName: 'soroban-rpc', endpoint });
-      }
-
-      return response.data.result;
-    } catch (error) {
-      this.metrics.failedCalls++;
-
-      // Record failure in circuit breaker
-      const cb = this.circuitBreakers.get(endpoint);
-      if (cb) {
-        cb.onFailure({ name: method, serviceName: 'soroban-rpc', endpoint });
-      }
-
-      if (error.response) {
-        throw new Error(`HTTP ${error.response.status}: ${error.response.statusText} - ${error.response.data?.message || error.message}`);
-      } else if (error.request) {
-        throw new Error('Network error: Unable to reach Soroban RPC server');
-      } else {
-        throw error;
-      }
-    }
+    });
   }
 
   /**

@@ -18,21 +18,33 @@ class CacheInvalidationService extends EventEmitter {
       'user_vaults_*',
       'user_portfolio:*',
       'cap_table:*',
-      'vault:*'
+      'vault:*',
+      'vesting:vault:*',
+      'vesting:sub_schedule:*',
+      'vesting:claims:*',
+      'vesting:schedule:*'
     ]);
 
     this.invalidationPatterns.set('vault_updated', [
       'user_vaults_*',
       'user_portfolio:*',
       'cap_table:*',
-      'vault:*'
+      'vault:*',
+      'vesting:vault:*',
+      'vesting:sub_schedule:*',
+      'vesting:claims:*',
+      'vesting:schedule:*'
     ]);
 
     this.invalidationPatterns.set('vault_deleted', [
       'user_vaults_*',
       'user_portfolio:*',
       'cap_table:*',
-      'vault:*'
+      'vault:*',
+      'vesting:vault:*',
+      'vesting:sub_schedule:*',
+      'vesting:claims:*',
+      'vesting:schedule:*'
     ]);
 
     // Beneficiary/Grant-related patterns
@@ -40,21 +52,33 @@ class CacheInvalidationService extends EventEmitter {
       'user_vaults_*',
       'user_portfolio:*',
       'cap_table:*',
-      'beneficiary:*'
+      'beneficiary:*',
+      'vesting:vault:*',
+      'vesting:sub_schedule:*',
+      'vesting:claims:*',
+      'vesting:schedule:*'
     ]);
 
     this.invalidationPatterns.set('beneficiary_updated', [
       'user_vaults_*',
       'user_portfolio:*',
       'cap_table:*',
-      'beneficiary:*'
+      'beneficiary:*',
+      'vesting:vault:*',
+      'vesting:sub_schedule:*',
+      'vesting:claims:*',
+      'vesting:schedule:*'
     ]);
 
     this.invalidationPatterns.set('beneficiary_deleted', [
       'user_vaults_*',
       'user_portfolio:*',
       'cap_table:*',
-      'beneficiary:*'
+      'beneficiary:*',
+      'vesting:vault:*',
+      'vesting:sub_schedule:*',
+      'vesting:claims:*',
+      'vesting:schedule:*'
     ]);
 
     // Claim-related patterns
@@ -62,7 +86,11 @@ class CacheInvalidationService extends EventEmitter {
       'user_vaults_*',
       'user_portfolio:*',
       'cap_table:*',
-      'claim:*'
+      'claim:*',
+      'vesting:vault:*',
+      'vesting:sub_schedule:*',
+      'vesting:claims:*',
+      'vesting:schedule:*'
     ]);
 
     // Organization-related patterns
@@ -125,8 +153,19 @@ class CacheInvalidationService extends EventEmitter {
             return true;
           }
 
-          // Get all keys matching the pattern
-          const keys = await cacheService.client.keys(pattern);
+          // Get all keys matching the pattern using non-blocking SCAN
+          const keys = [];
+          let cursor = 0;
+          do {
+            const reply = await cacheService.client.scan(cursor, {
+              MATCH: pattern,
+              COUNT: 100
+            });
+            cursor = reply.cursor;
+            if (reply.keys && reply.keys.length > 0) {
+              keys.push(...reply.keys);
+            }
+          } while (cursor !== 0);
           
           // Filter keys based on event data if needed
           const filteredKeys = this.filterKeysByEventData(keys, eventData);

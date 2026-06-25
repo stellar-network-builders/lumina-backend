@@ -29,6 +29,19 @@ const totalIndexedBlocks = new client.Gauge({
   help: 'Total number of ledger blocks indexed'
 });
 
+const cacheOperationsTotal = new client.Counter({
+  name: 'cache_operations_total',
+  help: 'Total number of cache operations (hits/misses/sets/invalidations)',
+  labelNames: ['operation', 'key_prefix', 'status']
+});
+
+const cacheOperationDurationSeconds = new client.Histogram({
+  name: 'cache_operation_duration_seconds',
+  help: 'Duration of cache operations in seconds',
+  labelNames: ['operation', 'key_prefix'],
+  buckets: [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5]
+});
+
 // RPC Health Metrics
 const rpcEndpointHealth = new client.Gauge({
   name: 'soroban_rpc_endpoint_health',
@@ -58,6 +71,8 @@ const rpcRetryCount = new client.Counter({
 register.registerMetric(apiResponseTime);
 register.registerMetric(activeDbConnections);
 register.registerMetric(totalIndexedBlocks);
+register.registerMetric(cacheOperationsTotal);
+register.registerMetric(cacheOperationDurationSeconds);
 register.registerMetric(rpcEndpointHealth);
 register.registerMetric(rpcHealthCheckLatency);
 register.registerMetric(rpcFailoverCount);
@@ -68,6 +83,8 @@ module.exports = {
   apiResponseTime,
   activeDbConnections,
   totalIndexedBlocks,
+  cacheOperationsTotal,
+  cacheOperationDurationSeconds,
   rpcEndpointHealth,
   rpcHealthCheckLatency,
   rpcFailoverCount,

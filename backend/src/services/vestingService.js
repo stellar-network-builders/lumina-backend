@@ -4,6 +4,7 @@ const { Vault, Beneficiary, SubSchedule } = require('../models');
 const { sequelize } = require('../database/connection');
 const auditLogger = require('./auditLogger');
 const cacheInvalidationService = require('./cacheInvalidationService');
+const cacheService = require('./cacheService');
 
 class VestingService {
   /**
@@ -123,6 +124,12 @@ class VestingService {
           resourceId: vaultAddress
         });
 
+        // Invalidate cache for vault creation
+        await cacheInvalidationService.invalidateCacheForEvent('vault_created', {
+          vaultId: vault.id,
+          orgId: vault.org_id
+        });
+
         return {
           success: true,
           message: 'Vault created successfully',
@@ -225,6 +232,12 @@ class VestingService {
     const addAmount = parseFloat(amount) || 0;
     await vault.update({ total_amount: String(currentTotal + addAmount) });
 
+    // Invalidate cache for vault update
+    await cacheInvalidationService.invalidateCacheForEvent('vault_updated', {
+      vaultId: vault.id,
+      orgId: vault.org_id
+    });
+
     // Schedule unlock events in the priority queue
     const vestingUnlockSyncService = require('./vestingUnlockSyncService');
     if (subSchedule.cliff_date) {
@@ -254,32 +267,85 @@ class VestingService {
    * @returns {Promise<Object>}
    */
   async getVestingSchedule(vaultAddress, beneficiaryAddress = null) {
-    const vault = await Vault.findOne({ where: { address: vaultAddress } });
-    if (!vault) {
-      throw new Error(`Vault not found: ${vaultAddress}`);
-    }
+    const cacheKey = beneficiaryAddress 
+      ? `vesting:schedule:${vaultAddress}:${beneficiaryAddress}` 
+      : `vesting:schedule:${vaultAddress}`;
+    
+    return await cacheService.getOrSet(cacheKey, 120, async () => {
+      const vault = await Vault.findOne({ where: { address: vaultAddress } });
+      if (!vault) {
+        throw new Error(`Vault not found: ${vaultAddress}`);
+      }
 
-    if (vault.is_blacklisted) {
-      throw new Error(`Vault ${vaultAddress} is blacklisted due to integrity failure.`);
-    }
+      if (vault.is_blacklisted) {
+        throw new Error(`Vault ${vaultAddress} is blacklisted due to integrity failure.`);
+      }
 
-    const subSchedules = await SubSchedule.findAll({ where: { vault_id: vault.id } });
+      const subSchedules = await SubSchedule.findAll({ where: { vault_id: vault.id } });
 
-    const bWhere = { vault_id: vault.id };
-    if (beneficiaryAddress) {
-      bWhere.address = beneficiaryAddress;
-    }
-    const beneficiaries = await Beneficiary.findAll({ where: bWhere });
+      const bWhere = { vault_id: vault.id };
+      if (beneficiaryAddress) {
+        bWhere.address = beneficiaryAddress;
+      }
+      const beneficiaries = await Beneficiary.findAll({ where: bWhere });
 
-    return {
-      address: vault.address,
-      name: vault.name,
-      token_address: vault.token_address,
-      owner_address: vault.owner_address,
-      total_amount: vault.total_amount,
-      subSchedules: subSchedules.map((s) => s.toJSON()),
-      beneficiaries: beneficiaries.map((b) => b.toJSON()),
-    };
+      return {
+        address: vault.address,
+        name: vault.name,
+        token_address: vault.token_address,
+        owner_address: vault.owner_address,
+        total_amount: vault.total_amount,
+        subSchedules: subSchedules.map((s) => s.toJSON()),
+        beneficiaries: beneficiaries.map((b) => b.toJSON()),
+      };
+    });
+  }
+
+  /**
+   * Get vault by ID with caching (5m TTL)
+   * @param {string} vaultId - Vault ID
+   * @returns {Promise<Object>} Vault details
+   */
+  async getVaultById(vaultId) {
+    const cacheKey = `vesting:vault:${vaultId}`;
+    return await cacheService.getOrSet(cacheKey, 300, async () => {
+      const vault = await Vault.findByPk(vaultId);
+      return vault ? vault.toJSON() : null;
+    });
+  }
+
+  /**
+   * Get sub-schedules for a vault with caching (2m TTL)
+   * @param {string} vaultId - Vault ID
+   * @returns {Promise<Array<Object>>} Sub-schedules
+   */
+  async getSubSchedulesByVaultId(vaultId) {
+    const cacheKey = `vesting:sub_schedule:${vaultId}`;
+    return await cacheService.getOrSet(cacheKey, 120, async () => {
+      const subSchedules = await SubSchedule.findAll({
+        where: { vault_id: vaultId }
+      });
+      return subSchedules.map(ss => ss.toJSON());
+    });
+  }
+
+  /**
+   * Get claims history for a sub-schedule with caching (30s TTL)
+   * @param {string} subScheduleId - Sub-schedule ID
+   * @returns {Promise<Array<Object>>} Claims history
+   */
+  async getClaimsBySubScheduleId(subScheduleId) {
+    const cacheKey = `vesting:claims:${subScheduleId}`;
+    return await cacheService.getOrSet(cacheKey, 30, async () => {
+      const subSchedule = await SubSchedule.findByPk(subScheduleId);
+      if (!subSchedule) return [];
+
+      const { ClaimsHistory } = require('../models');
+      const claims = await ClaimsHistory.findAll({
+        where: { vault_id: subSchedule.vault_id }
+      });
+      return claims.map(c => c.toJSON());
+    });
   }
 
   /**
@@ -443,6 +509,12 @@ class VestingService {
     } catch (feeError) {
         console.warn('Failed to accumulate protocol fee:', feeError.message);
     }
+
+    // Invalidate cache for claims/withdrawals
+    await cacheInvalidationService.invalidateCacheForEvent('claim_processed', {
+      userAddress: beneficiary_address,
+      vaultId: vault.id
+    });
 
     return {
       success: true,

@@ -189,41 +189,212 @@ class CacheService {
    * @param {string} pattern - Key pattern (e.g., "user_vaults_*")
    * @returns {Promise<boolean>} Success status
    */
+  /**
+   * Delete multiple keys matching a pattern (uses SCAN to prevent blocking)
+   * @param {string} pattern - Key pattern
+   * @returns {Promise<boolean>} Success status
+   */
   async deletePattern(pattern) {
     try {
       if (!this.isConnected || !this.client) {
         return false;
       }
 
-      const keys = await this.client.keys(pattern);
-      if (keys && keys.length > 0) {
-        await this.client.del(keys);
+      let cursor = 0;
+      const keysToDelete = [];
+
+      do {
+        const reply = await this.client.scan(cursor, {
+          MATCH: pattern,
+          COUNT: 100
+        });
+        
+        cursor = reply.cursor;
+        if (reply.keys && reply.keys.length > 0) {
+          keysToDelete.push(...reply.keys);
+        }
+      } while (cursor !== 0);
+
+      if (keysToDelete.length > 0) {
+        const chunkSize = 100;
+        for (let i = 0; i < keysToDelete.length; i += chunkSize) {
+          const chunk = keysToDelete.slice(i, i + chunkSize);
+          await this.client.del(chunk);
+        }
       }
       return true;
     } catch (error) {
       console.error(`Error deleting cache pattern ${pattern}:`, error);
-      return false;
+      try {
+        const keys = await this.client.keys(pattern);
+        if (keys && keys.length > 0) {
+          await this.client.del(keys);
+        }
+        return true;
+      } catch (fallbackError) {
+        console.error(`Fallback key deletion failed for pattern ${pattern}:`, fallbackError);
+        return false;
+      }
     }
   }
 
   /**
-   * Wrap an async function with caching
+   * Cache-aside implementation with thundering herd protection via atomic distributed lock
+   * @param {string} key - Cache key
+   * @param {number} ttl - Time to live in seconds
+   * @param {Function} fetchFn - Async function to fetch data on miss
+   * @returns {Promise<any>} Cached or fetched data
+   */
+  async getOrSet(key, ttl, fetchFn) {
+    const startTime = Date.now();
+    const keyPrefix = key.split(':')[0] || 'unknown';
+
+    if (!this.isReady()) {
+      this.recordMetric('miss', keyPrefix, 'getOrSet', startTime);
+      return await fetchFn();
+    }
+
+    try {
+      const cached = await this.get(key);
+      if (cached !== null) {
+        this.recordMetric('hit', keyPrefix, 'getOrSet', startTime);
+        return cached;
+      }
+    } catch (error) {
+      console.error(`Error reading from cache for key ${key}:`, error);
+    }
+
+    const lockKey = `lock:${key}`;
+    const lockTtl = 5;
+    let lockAcquired = false;
+
+    try {
+      const result = await this.client.set(lockKey, '1', {
+        NX: true,
+        EX: lockTtl
+      });
+      lockAcquired = result === 'OK';
+    } catch (error) {
+      console.error(`Error acquiring lock for key ${key}:`, error);
+    }
+
+    if (lockAcquired) {
+      this.recordMetric('miss', keyPrefix, 'getOrSet', startTime);
+      try {
+        const data = await fetchFn();
+        if (data !== null && data !== undefined) {
+          await this.set(key, data, ttl);
+        }
+        return data;
+      } finally {
+        try {
+          await this.client.del(lockKey);
+        } catch (error) {
+          console.error(`Error releasing lock for key ${key}:`, error);
+        }
+      }
+    } else {
+      const maxRetries = 10;
+      const retryDelay = 100;
+      for (let i = 0; i < maxRetries; i++) {
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
+        try {
+          const cached = await this.get(key);
+          if (cached !== null) {
+            this.recordMetric('hit', keyPrefix, 'getOrSet_retry', startTime);
+            return cached;
+          }
+        } catch (error) {
+          console.error(`Error reading from cache during retry for key ${key}:`, error);
+        }
+      }
+
+      this.recordMetric('miss_fallback', keyPrefix, 'getOrSet', startTime);
+      return await fetchFn();
+    }
+  }
+
+  /**
+   * Batch cache invalidation by key prefix
+   * @param {string} pattern - Prefix or glob pattern to invalidate
+   * @returns {Promise<boolean>} Success status
+   */
+  async invalidatePattern(pattern) {
+    const startTime = Date.now();
+    const keyPrefix = pattern.split(':')[0] || 'unknown';
+    const result = await this.deletePattern(pattern);
+    this.recordMetric('invalidate', keyPrefix, 'invalidatePattern', startTime);
+    return result;
+  }
+
+  /**
+   * Background cache warming for known high-traffic keys
+   * @param {string[]} keys - Cache keys to warm
+   * @param {Function} fetchFn - Fetch function taking key and returning value
+   * @param {number} ttl - TTL in seconds
+   */
+  warm(keys, fetchFn, ttl = this.defaultTTL) {
+    const startTime = Date.now();
+    Promise.resolve().then(async () => {
+      for (const key of keys) {
+        const keyPrefix = key.split(':')[0] || 'unknown';
+        try {
+          const data = await fetchFn(key);
+          if (data !== null && data !== undefined) {
+            await this.set(key, data, ttl);
+            this.recordMetric('set', keyPrefix, 'warm', startTime);
+          }
+        } catch (error) {
+          console.error(`Error warming cache for key ${key}:`, error);
+        }
+      }
+    }).catch((error) => {
+      console.error('Background warming process failed:', error);
+    });
+  }
+
+  /**
+   * Record prometheus cache metrics
+   */
+  recordMetric(status, keyPrefix, operation, startTime) {
+    try {
+      if (!metricsService) {
+        try {
+          metricsService = require('./metricsService');
+        } catch (e) {
+          // Ignore
+        }
+      }
+      if (metricsService) {
+        const duration = (Date.now() - startTime) / 1000;
+        if (metricsService.cacheOperationsTotal) {
+          metricsService.cacheOperationsTotal.inc({
+            operation,
+            key_prefix: keyPrefix,
+            status
+          });
+        }
+        if (metricsService.cacheOperationDurationSeconds) {
+          metricsService.cacheOperationDurationSeconds.observe({
+            operation,
+            key_prefix: keyPrefix
+          }, duration);
+        }
+      }
+    } catch (err) {
+      // Prevent metric recording from throwing and breaking app logic
+    }
+  }
+
+  /**
+   * Wrap an async function with caching (legacy compatibility)
    * @param {string} key - Cache key
    * @param {Function} fn - Async function to wrap
    * @param {number} ttl - TTL in seconds
    * @returns {Promise<any>} Result from cache or function
    */
   async wrapWithCache(key, fn, ttl = this.defaultTTL) {
-    const cachedValue = await this.get(key);
-    if (cachedValue !== null) {
-      return cachedValue;
-    }
-
-    const result = await fn();
-    if (result !== null && result !== undefined) {
-      await this.set(key, result, ttl);
-    }
-    return result;
+    return this.getOrSet(key, ttl, fn);
   }
 
   /**
@@ -277,5 +448,7 @@ class CacheService {
     }
   }
 }
+
+let metricsService = null;
 
 module.exports = new CacheService();

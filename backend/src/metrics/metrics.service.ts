@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectMetric } from '@willsoto/nestjs-prometheus';
-import { Gauge } from 'prom-client';
+import { Gauge, Counter, Histogram } from 'prom-client';
 import * as connection from '../database/connection';
 const indexingService = require('../services/indexingService');
 
@@ -9,6 +9,8 @@ export class MetricsService implements OnModuleInit {
   constructor(
     @InjectMetric('active_database_connections') public readonly dbConnections: Gauge<string>,
     @InjectMetric('total_indexed_ledger_blocks') public readonly indexedBlocks: Gauge<string>,
+    @InjectMetric('cache_operations_total') public readonly cacheOperations: Counter<string>,
+    @InjectMetric('cache_operation_duration_seconds') public readonly cacheDuration: Histogram<string>,
   ) {}
 
   onModuleInit() {

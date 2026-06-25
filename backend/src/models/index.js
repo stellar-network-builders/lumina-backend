@@ -50,6 +50,7 @@ const RoiCalculation = require("./roiCalculation");
 const ClaimWebhookDelivery = require("./claimWebhookDelivery");
 const VestingStateReconciliation = require("./vestingStateReconciliation");
 
+const IdempotencyKey = require("./idempotencyKey");
 const { Token, initTokenModel } = require("./token");
 const {
   OrganizationWebhook,
@@ -114,6 +115,7 @@ const models = {
   GrantPriceSnapshot,
   RoiCalculation,
   VestingStateReconciliation,
+  IdempotencyKey,
   sequelize,
 };
 

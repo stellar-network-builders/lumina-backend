@@ -9,6 +9,7 @@ const BalanceTracker = require('./balanceTracker');
 const BalanceInfo = require('../models/BalanceInfo');
 const { Vault, SubSchedule, Beneficiary } = require('../models');
 const ClaimCalculator = require('./claimCalculator');
+const cacheService = require('./cacheService');
 
 class VaultService {
   /**
@@ -27,39 +28,104 @@ class VaultService {
    * @throws {Error} If vault not found or balance query fails
    */
   async queryBalanceInfo(vaultId) {
-    // Find the vault
-    const vault = await Vault.findByPk(vaultId);
-    
-    if (!vault) {
-      throw new Error(`Vault not found: ${vaultId}`);
-    }
-
-    if (vault.is_blacklisted) {
-      throw new Error(`Vault ${vaultId} is blacklisted due to integrity failure.`);
-    }
-
-    const trackedBalance = vault.total_amount;
-    let actualBalance = trackedBalance;
-    let distributionRatios = null;
-
-    // For dynamic tokens, query the actual SAC balance
-    if (vault.token_type === 'dynamic') {
-      try {
-        actualBalance = await this.balanceTracker.getActualBalance(
-          vault.token_address,
-          vault.address
-        );
-      } catch (error) {
-        console.error(`Failed to query actual balance for vault ${vaultId}:`, error);
-        throw error;
+    const cacheKey = `vesting:vault:${vaultId}`;
+    return await cacheService.getOrSet(cacheKey, 300, async () => {
+      // Find the vault
+      const vault = await Vault.findByPk(vaultId);
+      
+      if (!vault) {
+        throw new Error(`Vault not found: ${vaultId}`);
       }
 
-      // Calculate distribution ratios for dynamic vaults
-      distributionRatios = await this._calculateDistributionRatios(vault, actualBalance);
-    }
+      if (vault.is_blacklisted) {
+        throw new Error(`Vault ${vaultId} is blacklisted due to integrity failure.`);
+      }
 
-    // Create and return BalanceInfo
-    return BalanceInfo.fromVault(vault, actualBalance, distributionRatios);
+      const trackedBalance = vault.total_amount;
+      let actualBalance = trackedBalance;
+      let distributionRatios = null;
+
+      // For dynamic tokens, query the actual SAC balance
+      if (vault.token_type === 'dynamic') {
+        try {
+          actualBalance = await this.balanceTracker.getActualBalance(
+            vault.token_address,
+            vault.address
+          );
+        } catch (error) {
+          console.error(`Failed to query actual balance for vault ${vaultId}:`, error);
+          throw error;
+        }
+
+        // Calculate distribution ratios for dynamic vaults
+        distributionRatios = await this._calculateDistributionRatios(vault, actualBalance);
+      }
+
+      // Create and return BalanceInfo
+      const balanceInfo = BalanceInfo.fromVault(vault, actualBalance, distributionRatios);
+      return JSON.parse(JSON.stringify(balanceInfo));
+    });
+  }
+
+  /**
+   * Get vault by ID with caching (5m TTL)
+   * @param {string} vaultId - Vault ID
+   * @returns {Promise<Object>} Vault details
+   */
+  async getVaultById(vaultId) {
+    const cacheKey = `vesting:vault:${vaultId}`;
+    return await cacheService.getOrSet(cacheKey, 300, async () => {
+      const vault = await Vault.findByPk(vaultId);
+      return vault ? vault.toJSON() : null;
+    });
+  }
+
+  /**
+   * Get sub-schedules for a vault with caching (2m TTL)
+   * @param {string} vaultId - Vault ID
+   * @returns {Promise<Array<Object>>} Sub-schedules
+   */
+  async getSubSchedulesByVaultId(vaultId) {
+    const cacheKey = `vesting:sub_schedule:${vaultId}`;
+    return await cacheService.getOrSet(cacheKey, 120, async () => {
+      const subSchedules = await SubSchedule.findAll({
+        where: { vault_id: vaultId }
+      });
+      return subSchedules.map(ss => ss.toJSON());
+    });
+  }
+
+  /**
+   * Get claims history for a sub-schedule with caching (30s TTL)
+   * @param {string} subScheduleId - Sub-schedule ID
+   * @returns {Promise<Array<Object>>} Claims history
+   */
+  async getClaimsBySubScheduleId(subScheduleId) {
+    const cacheKey = `vesting:claims:${subScheduleId}`;
+    return await cacheService.getOrSet(cacheKey, 30, async () => {
+      const subSchedule = await SubSchedule.findByPk(subScheduleId);
+      if (!subSchedule) return [];
+
+      const { ClaimsHistory } = require('../models');
+      const claims = await ClaimsHistory.findAll({
+        where: { vault_id: subSchedule.vault_id }
+      });
+      return claims.map(c => c.toJSON());
+    });
+  }
+
+  /**
+   * Invalidate cache for a vault (after write operations)
+   * @param {string} vaultId - Vault ID
+   */
+  async invalidateVaultCache(vaultId) {
+    await cacheService.invalidatePattern(`vesting:vault:${vaultId}`);
+    await cacheService.invalidatePattern(`vesting:sub_schedule:${vaultId}`);
+    await cacheService.invalidatePattern(`vesting:claims:*`);
+    const vault = await Vault.findByPk(vaultId);
+    if (vault) {
+      await cacheService.invalidatePattern(`vesting:schedule:${vault.address}*`);
+    }
   }
 
   /**
@@ -129,7 +195,6 @@ class VaultService {
         withdrawn_amount: String(withdrawnNum),
         ratio: ratio.toFixed(6),
         proportional_share: String(proportionalShare.toFixed(18)),
-        claimable_amount: String(claimable.toFixed(18))
       };
     });
 

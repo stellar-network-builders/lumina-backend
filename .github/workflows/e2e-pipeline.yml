@@ -43,10 +43,10 @@ jobs:
     name: "Lint & Static Analysis"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -86,10 +86,10 @@ jobs:
           - 5432:5432
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -127,7 +127,7 @@ jobs:
           DB_NAME: vesting_vault_test
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: unit-coverage
@@ -142,7 +142,7 @@ jobs:
     if: ${{ github.event.inputs.skip_contracts != 'true' }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Install Rust (${{ env.RUST_TOOLCHAIN }})
         uses: dtolnay/rust-toolchain@stable
@@ -150,7 +150,7 @@ jobs:
           targets: wasm32-unknown-unknown
 
       - name: Cache Cargo registry
-        uses: actions/cache@v5
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
@@ -192,7 +192,7 @@ jobs:
           fi
 
       - name: Upload WASM artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: vesting-vault-wasm
           path: contracts/target/wasm32-unknown-unknown/release/*.wasm
@@ -254,10 +254,10 @@ jobs:
         # (GitHub Actions services don't support 'command' — use a workaround)
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -359,7 +359,7 @@ jobs:
           CYPRESS_STELLAR_NETWORK_PASSPHRASE: "Standalone Network ; February 2017"
 
       - name: Upload Cypress screenshots (on failure)
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: cypress-screenshots
@@ -367,7 +367,7 @@ jobs:
           retention-days: 7
 
       - name: Upload Cypress videos
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: cypress-videos
@@ -375,7 +375,7 @@ jobs:
           retention-days: 7
 
       - name: Upload Cypress JUnit results
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: cypress-results
@@ -383,7 +383,7 @@ jobs:
           retention-days: 7
 
       - name: Publish test results
-        uses: dorny/test-reporter@v3
+        uses: dorny/test-reporter@v1
         if: always()
         with:
           name: "Cypress E2E Results"

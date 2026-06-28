@@ -15,7 +15,11 @@
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:parity": "cross-env NODE_ENV=test jest --testPathPattern='sorobanVestingParity.test' --forceExit --verbose",
-    "test:all": "npm run test:integration && npm run test:e2e"
+    "test:all": "npm run test:integration && npm run test:e2e",
+    "audit:ci": "npm audit --audit-level=high",
+    "snyk:test": "npx --yes snyk test --severity-threshold=high --policy-path=.snyk",
+    "snyk:monitor": "npx --yes snyk monitor --policy-path=.snyk",
+    "sbom": "npm sbom --sbom-format=cyclonedx --omit=dev > ../reports/sbom/lumina-backend.cdx.json && echo 'SBOM written to reports/sbom/lumina-backend.cdx.json'"
   },
   "dependencies": {
     "@apollo/server": "^4.9.5",

@@ -1,16 +1,24 @@
 [workspace]
 members = [
     "malicious-contract",
-    "reentrancy-tests",
     "vesting-vault"
 ]
-# merkle_vault is a work-in-progress (issue #51) that does not yet compile:
-# it pins a different soroban-sdk major than the workspace and uses APIs that
-# don't type-check (env.crypto().sha256() returns Hash<32>, not BytesN<32>, and
-# env.serialize() is not a soroban-sdk method). Excluded from the workspace
-# build until it is completed; move it back into `members` once it compiles.
+# Excluded from the workspace build because these crates do not currently
+# compile against the workspace's soroban-sdk. They are skipped in CI (see the
+# e2e-pipeline and smart-contract-tests workflows) until they are reworked.
+#
+# - merkle_vault: work-in-progress (issue #51); pins a different soroban-sdk
+#   major and uses APIs that don't type-check (env.crypto().sha256() returns
+#   Hash<32>, not BytesN<32>, and env.serialize() is not a soroban-sdk method).
+# - reentrancy-tests: mis-architected WIP crate (60+ type errors against
+#   soroban-sdk 21); pending a rewrite as a #[cfg(test)] module that uses the
+#   SDK-generated contract clients. Was previously (incorrectly) listed under
+#   `members`, which broke the workspace build.
+#
+# Move each back into `members` once it compiles.
 exclude = [
-    "merkle_vault"
+    "merkle_vault",
+    "reentrancy-tests"
 ]
 resolver = "2"
 

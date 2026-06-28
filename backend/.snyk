@@ -1,0 +1,29 @@
+# Snyk (https://snyk.io) policy file — backend npm project (issue #12)
+#
+# This file controls how Snyk treats specific vulnerabilities for the
+# `lumina-backend` npm dependency tree. Use it to silence confirmed false
+# positives or to time-box an accepted risk while a fix is coordinated.
+#
+# Every entry MUST include a reason and an expiry date. Entries without an
+# expiry are rejected in review — see docs/dependency-management.md for the
+# exemption policy and escalation path. Re-evaluate all ignores at each expiry;
+# do not blindly extend them.
+#
+# Format reference: https://docs.snyk.io/snyk-cli/commands/ignore
+version: v1.25.0
+
+# Vulnerabilities to ignore. Keep this empty unless an advisory is a confirmed
+# false positive or an explicitly accepted, time-boxed risk.
+#
+# Example (remove the leading '#' and adapt before use):
+# ignore:
+#   SNYK-JS-EXAMPLE-1234567:
+#     - '*':
+#         reason: >-
+#           Confirmed false positive — the vulnerable code path (X) is never
+#           reached because we only call Y. Tracked in JIRA-000.
+#         expires: 2026-09-30T00:00:00.000Z
+ignore: {}
+
+# Patches applied by `snyk wizard` / `snyk protect`. Managed automatically.
+patch: {}

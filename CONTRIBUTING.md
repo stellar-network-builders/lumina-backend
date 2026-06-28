@@ -2,6 +2,19 @@
 
 Thank you for your interest in contributing to Vesting Vault! This guide will help you get the development environment set up and running quickly.
 
+## Reporting security vulnerabilities
+
+**Do not open a public issue or PR for a security vulnerability in our own code.**
+Report it privately via the repository's **Security → "Report a vulnerability"**
+tab. The full disclosure playbook (acknowledgement and remediation timelines,
+severity targets, escalation path) is in [`SECURITY.md`](SECURITY.md).
+
+For **dependency** vulnerabilities — how the npm and Cargo trees are scanned
+(Dependabot, Snyk, `npm audit`, `cargo audit`), how SBOMs are produced, and the
+exemption/escalation policy — see
+[`docs/dependency-management.md`](docs/dependency-management.md). A normal PR
+referencing the advisory is fine for vulnerable third-party packages.
+
 ## Prerequisites
 
 Before you begin, ensure you have the following installed:

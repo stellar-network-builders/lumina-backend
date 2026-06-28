@@ -59,3 +59,9 @@ jspm_packages/
 # dotenv environment variables file
 .env.test
 node_modules
+
+# Generated SBOM artifacts (issue #12) — produced in CI, not committed.
+# The reports/sbom/ directory itself is kept via its README and .gitkeep.
+reports/sbom/*.json
+reports/sbom/*.xml
+!reports/sbom/.gitkeep

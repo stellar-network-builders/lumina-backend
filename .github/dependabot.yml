@@ -1,7 +1,9 @@
-# Dependabot configuration — Issue #263
-# Automatically opens PRs for npm and GitHub Actions dependency updates.
-# Any PR that introduces a package with a known CVE will be flagged by
-# the vulnerability-scan.yml workflow and must be resolved before merging.
+# Dependabot configuration — Issues #263 and #12
+# Automatically opens PRs for npm, Cargo (Soroban contracts) and GitHub Actions
+# dependency updates. Any PR that introduces a package with a known CVE will be
+# flagged by the vulnerability-scan.yml workflow and must be resolved before
+# merging. See docs/dependency-management.md for the scanning schedule, the
+# exemption policy and the escalation path.
 
 version: 2
 updates:
@@ -25,6 +27,43 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "express"
         update-types: ["version-update:semver-major"]
+
+  # Cargo dependencies (Soroban smart contracts).
+  # Points at the workspace root (contracts/Cargo.toml). Dependabot resolves the
+  # workspace members (vesting-vault, malicious-contract, reentrancy-tests) from
+  # the shared contracts/Cargo.lock. The merkle_vault crate is currently
+  # excluded from the workspace (issue #51) and is covered by its own entry.
+  - package-ecosystem: "cargo"
+    directory: "/contracts"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "security"
+      - "contracts"
+    commit-message:
+      prefix: "chore(deps)"
+
+  # Cargo dependencies for the work-in-progress merkle_vault crate (issue #51),
+  # which is excluded from the workspace and tracks its own Cargo.lock.
+  - package-ecosystem: "cargo"
+    directory: "/contracts/merkle_vault"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "security"
+      - "contracts"
+    commit-message:
+      prefix: "chore(deps)"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"

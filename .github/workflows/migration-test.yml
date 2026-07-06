@@ -1,0 +1,386 @@
+name: "Database Migration Test & Schema Drift Detection"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# This workflow validates database migrations on every PR that touches
+# migration files or model definitions. It runs:
+#   1. Forward migration (apply all in order)
+#   2. Idempotency test (re-apply - should be no-ops)
+#   3. Model validation (verify all expected tables exist)
+#   4. Schema drift detection (compare against known-good snapshot)
+#   5. Naming convention enforcement
+#   6. PR comment with migration summary
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "backend/migrations/**"
+      - "backend/src/models/**"
+      - "backend/src/database/**"
+      - "db/migrations/**"
+      - "legacy_cleanup/database/migrations/**"
+      - ".github/workflows/migration-test.yml"
+      - "scripts/test-migrations.sh"
+      - "scripts/migration-summary.js"
+  push:
+    branches: [main, develop]
+    paths:
+      - "backend/migrations/**"
+      - "backend/src/models/**"
+      - "backend/src/database/**"
+      - "db/migrations/**"
+      - "legacy_cleanup/database/migrations/**"
+      - ".github/workflows/migration-test.yml"
+      - "scripts/test-migrations.sh"
+      - "scripts/migration-summary.js"
+  workflow_dispatch:
+    inputs:
+      skip_snapshot_update:
+        description: "Skip generating updated schema snapshot"
+        required: false
+        default: "false"
+        type: boolean
+
+# Cancel in-progress runs on the same branch
+concurrency:
+  group: migration-test-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+  PG_VERSION: "15"
+
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+
+  # ── Stage 1: Migration Forward + Idempotency + Validation ──────────────────
+  migration-test:
+    name: "Migration Test (apply → idempotency → validate)"
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:${{ env.PG_VERSION }}-alpine
+        env:
+          POSTGRES_DB: vesting_vault_migration_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: migration_test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install PostgreSQL client tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+
+      - name: Run migration test script
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: migration_test_password
+          PGDATABASE: vesting_vault_migration_test
+        run: |
+          chmod +x scripts/test-migrations.sh
+          bash scripts/test-migrations.sh
+
+      - name: Upload migration test log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: migration-test-log
+          path: /tmp/migration-test-*.log
+          retention-days: 7
+
+  # ── Stage 2: Schema Drift Detection ──────────────────────────────────────
+  schema-drift:
+    name: "Schema Drift Detection"
+    runs-on: ubuntu-latest
+    needs: migration-test
+
+    services:
+      postgres:
+        image: postgres:${{ env.PG_VERSION }}-alpine
+        env:
+          POSTGRES_DB: vesting_vault_schema_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: schema_test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install PostgreSQL client tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+
+      - name: Apply all migrations to fresh database
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: schema_test_password
+          PGDATABASE: vesting_vault_schema_test
+        run: |
+          chmod +x scripts/test-migrations.sh
+          bash scripts/test-migrations.sh --apply-only
+
+      - name: Export current schema
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: schema_test_password
+          PGDATABASE: vesting_vault_schema_test
+        run: |
+          pg_dump --schema-only --no-owner --no-privileges \
+            --exclude-table=pg_buffercache \
+            > /tmp/current-schema.sql
+
+      - name: Compare schema against known-good snapshot
+        run: |
+          SNAPSHOT="db/schema-snapshot.sql"
+          if [ -f "$SNAPSHOT" ]; then
+            echo "Comparing current schema against known-good snapshot..."
+            # Normalize both files for comparison (strip comments, blank lines, whitespace)
+            NORMALIZED_CURRENT=$(mktemp)
+            NORMALIZED_SNAPSHOT=$(mktemp)
+            grep -v '^--' /tmp/current-schema.sql | grep -v '^$' | sed 's/[[:space:]]\+/ /g' > "$NORMALIZED_CURRENT"
+            grep -v '^--' "$SNAPSHOT" | grep -v '^$' | sed 's/[[:space:]]\+/ /g' > "$NORMALIZED_SNAPSHOT"
+
+            if diff -q "$NORMALIZED_CURRENT" "$NORMALIZED_SNAPSHOT" > /dev/null 2>&1; then
+              echo "✅ Schema matches known-good snapshot — no drift detected."
+            else
+              echo "⚠️  SCHEMA DRIFT DETECTED!"
+              echo ""
+              echo "Differences between current schema and snapshot:"
+              echo "================================================"
+              diff "$NORMALIZED_CURRENT" "$NORMALIZED_SNAPSHOT" | head -100 || true
+              echo ""
+              echo "If these changes are intentional, update the snapshot with:"
+              echo "  pg_dump --schema-only --no-owner --no-privileges postgresql://... > db/schema-snapshot.sql"
+              echo ""
+              # Don't fail the build on drift — just warn (we auto-update on main)
+              if [[ "${{ github.event_name }}" == "push" && "${{ github.ref_name }}" == "main" ]]; then
+                echo "On main branch — auto-updating snapshot."
+                cp /tmp/current-schema.sql "$SNAPSHOT"
+              fi
+            fi
+          else
+            echo "No snapshot file found at $SNAPSHOT — generating baseline..."
+            cp /tmp/current-schema.sql "$SNAPSHOT"
+            echo "Baseline schema snapshot generated at $SNAPSHOT"
+          fi
+
+      - name: Upload current schema
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: current-schema
+          path: /tmp/current-schema.sql
+          retention-days: 7
+
+  # ── Stage 3: Naming Convention Validation ────────────────────────────────
+  naming-convention:
+    name: "Migration Naming Convention Check"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Validate migration file names
+        run: |
+          echo "Checking migration naming conventions..."
+          echo "Expected format: NNN_descriptive_name.sql, YYYYMMDD_descriptive_name.sql, or YYYYMMDDHHMMSS-descriptive-name.js"
+          echo ""
+
+          ERRORS=0
+          MIGRATION_DIRS=(
+            "backend/migrations"
+            "db/migrations"
+            "legacy_cleanup/database/migrations"
+          )
+
+          for DIR in "${MIGRATION_DIRS[@]}"; do
+            if [ ! -d "$DIR" ]; then
+              continue
+            fi
+
+            echo "Checking $DIR ..."
+
+            # Check SQL files: NNN_descriptive_name.sql or YYYYMMDD_descriptive_name.sql
+            for FILE in "$DIR"/*.sql; do
+              [ -e "$FILE" ] || continue
+              BASENAME=$(basename "$FILE")
+              if ! echo "$BASENAME" | grep -qP '^(\d{3}_|\d{8}_).+\.sql$'; then
+                echo "  ❌ $BASENAME — must match pattern NNN_descriptive_name.sql or YYYYMMDD_descriptive_name.sql"
+                ERRORS=$((ERRORS + 1))
+              fi
+            done
+
+            # Check JS files: YYYYMMDDHHMMSS-descriptive-name.js
+            for FILE in "$DIR"/*.js; do
+              [ -e "$FILE" ] || continue
+              BASENAME=$(basename "$FILE")
+              if ! echo "$BASENAME" | grep -qP '^\d{14}-.+\.js$'; then
+                echo "  ❌ $BASENAME — must match pattern YYYYMMDDHHMMSS-descriptive-name.js"
+                ERRORS=$((ERRORS + 1))
+              fi
+            done
+          done
+
+          # Check for duplicate numeric prefixes
+          echo ""
+          echo "Checking for duplicate migration numbers..."
+
+          # Extract prefixes and check for duplicates
+          {
+            for DIR in "${MIGRATION_DIRS[@]}"; do
+              [ -d "$DIR" ] || continue
+              for FILE in "$DIR"/*.sql; do
+                [ -e "$FILE" ] || continue
+                basename "$FILE" | grep -oP '^\d+'
+              done
+            done
+          } | sort | uniq -d > /tmp/duplicate-prefixes.txt
+
+          while read -r PREFIX; do
+            [ -z "$PREFIX" ] && continue
+            echo "  ❌ Duplicate prefix $PREFIX detected across migration files!"
+            ERRORS=$((ERRORS + 1))
+          done < /tmp/duplicate-prefixes.txt
+
+          if [ "$ERRORS" -gt 0 ]; then
+            echo ""
+            echo "❌ $ERRORS naming convention violation(s) found. Please fix before merging."
+            exit 1
+          fi
+
+          echo ""
+          echo "✅ All migration file names follow convention."
+
+  # ── Stage 4: Backup Compatibility Check ──────────────────────────────────
+  backup-compatibility:
+    name: "Backup/Restore Compatibility"
+    runs-on: ubuntu-latest
+    needs: migration-test
+
+    services:
+      postgres:
+        image: postgres:${{ env.PG_VERSION }}-alpine
+        env:
+          POSTGRES_DB: vesting_vault_backup_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: backup_test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install PostgreSQL client tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+
+      - name: Apply all migrations
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: backup_test_password
+          PGDATABASE: vesting_vault_backup_test
+        run: |
+          chmod +x scripts/test-migrations.sh
+          bash scripts/test-migrations.sh --apply-only
+
+      - name: Verify pg_dump compatibility
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: backup_test_password
+          PGDATABASE: vesting_vault_backup_test
+        run: |
+          echo "Testing pg_dump (full export)..."
+          if pg_dump --format=plain --no-password > /tmp/backup-test.sql 2>/tmp/backup-errors.log; then
+            DUMP_SIZE=$(wc -l < /tmp/backup-test.sql)
+            echo "✅ pg_dump succeeded — exported $DUMP_SIZE lines"
+          else
+            echo "❌ pg_dump failed!"
+            cat /tmp/backup-errors.log
+            exit 1
+          fi
+
+          echo ""
+          echo "Testing pg_dump --schema-only..."
+          if pg_dump --schema-only --no-password > /tmp/schema-only.sql 2>/tmp/schema-errors.log; then
+            SCHEMA_LINES=$(wc -l < /tmp/schema-only.sql)
+            echo "✅ pg_dump --schema-only succeeded — $SCHEMA_LINES lines"
+          else
+            echo "❌ pg_dump --schema-only failed!"
+            cat /tmp/schema-errors.log
+            exit 1
+          fi
+
+          echo ""
+          echo "Validating exported schema is non-empty..."
+          TABLE_COUNT=$(grep -c "CREATE TABLE" /tmp/schema-only.sql || echo "0")
+          if [ "$TABLE_COUNT" -gt 0 ]; then
+            echo "✅ Schema contains $TABLE_COUNT table definitions"
+          else
+            echo "❌ Schema contains no table definitions!"
+            exit 1
+          fi
+
+  # ── Stage 5: Migration Summary PR Comment ─────────────────────────────────
+  migration-summary:
+    name: "Post Migration Summary"
+    runs-on: ubuntu-latest
+    needs: [migration-test, naming-convention]
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # Full history for diff analysis
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Generate and post migration summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          node scripts/migration-summary.js

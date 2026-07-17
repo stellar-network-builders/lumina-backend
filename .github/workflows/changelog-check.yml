@@ -1,0 +1,37 @@
+name: Changelog Check
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - CHANGELOG.md
+      - scripts/validate_changelog.py
+      - scripts/test_validate_changelog.py
+      - .github/workflows/changelog-check.yml
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - CHANGELOG.md
+      - scripts/validate_changelog.py
+      - scripts/test_validate_changelog.py
+      - .github/workflows/changelog-check.yml
+  workflow_dispatch:
+
+jobs:
+  changelog-check:
+    name: Validate changelog
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+
+      - name: Test changelog validator
+        run: python -m unittest discover -s scripts -p "test_validate_changelog.py"
+
+      - name: Validate CHANGELOG.md
+        run: python scripts/validate_changelog.py CHANGELOG.md

@@ -4,6 +4,7 @@ const Vault = require('../models/vault');
 const SubSchedule = require('../models/subSchedule');
 const Beneficiary = require('../models/beneficiary');
 const { claimEventEmitter } = require('../services/indexingService');
+const WebSocketConnectionGuard = require('./websocketAuthGuard');
 
 /**
  * DashboardGateway - Enhanced real-time WebSocket Gateway for dashboard updates
@@ -11,7 +12,7 @@ const { claimEventEmitter } = require('../services/indexingService');
  * Provides instant updates when users claim tokens on-chain
  */
 class DashboardGateway {
-  constructor(httpServer) {
+  constructor(httpServer, options = {}) {
     this.io = new Server(httpServer, {
       cors: {
         origin: process.env.FRONTEND_URL || "http://localhost:3000",
@@ -23,14 +24,23 @@ class DashboardGateway {
     this.connectedUsers = new Map(); // Map<userAddress, Set<socketId>>
     this.userSockets = new Map(); // Map<socketId, userAddress>
     this.updateIntervalMs = 5000; // Soroban ledger closes every 5 seconds
-    
+
+    // Connection guard: JWT auth + per-IP/per-user rate limits + audit (issue #6).
+    this.guard = options.guard || new WebSocketConnectionGuard();
+    this.io.use(this.guard.middleware());
+
     this.initialize();
   }
 
   initialize() {
     this.io.on('connection', (socket) => {
-      console.log(`Client connected: ${socket.id}`);
-      
+      // By the time we get here the guard has authenticated the socket and set
+      // socket.auth = { address, role } and socket.userAddress.
+      console.log(`Client connected: ${socket.id} (user ${socket.userAddress})`);
+
+      // Bind the verified identity immediately so the user receives their updates.
+      this.userSockets.set(socket.id, socket.userAddress);
+
       // Handle user authentication and subscription
       socket.on('authenticate', async (data) => {
         await this.handleAuthentication(socket, data);
@@ -79,22 +89,20 @@ class DashboardGateway {
   }
 
   async handleAuthentication(socket, data) {
+    // Connections are already authenticated by the guard middleware at the
+    // handshake (a JWT is required to establish the socket at all). This handler
+    // simply confirms the verified identity; the client-supplied address is
+    // never trusted over the token.
     try {
-      const { userAddress, token } = data;
-      
-      // Here you would validate the token (JWT, etc.)
-      // For now, we'll accept the userAddress as-is
+      const userAddress = socket.userAddress;
       if (!userAddress) {
-        socket.emit('error', { message: 'User address is required' });
+        socket.emit('error', { message: 'Not authenticated' });
         return;
       }
 
-      // Store the authenticated user
-      socket.userAddress = userAddress;
       this.userSockets.set(socket.id, userAddress);
-      
-      socket.emit('authenticated', { success: true, userAddress });
-      console.log(`User ${userAddress} authenticated with socket ${socket.id}`);
+      socket.emit('authenticated', { success: true, userAddress, role: socket.auth && socket.auth.role });
+      console.log(`User ${userAddress} confirmed on socket ${socket.id}`);
     } catch (error) {
       console.error('Authentication error:', error);
       socket.emit('error', { message: 'Authentication failed' });
@@ -102,10 +110,11 @@ class DashboardGateway {
   }
 
   handleUserSubscription(socket, data) {
-    const { userAddress } = data;
-    
-    if (!userAddress || userAddress !== socket.userAddress) {
-      socket.emit('error', { message: 'Invalid user address' });
+    // A user may only subscribe to events for their own verified address.
+    const userAddress = (data && data.userAddress) || socket.userAddress;
+
+    if (!this.guard.authorizeUserAccess(socket, data && data.userAddress)) {
+      socket.emit('error', { message: 'Forbidden: cannot subscribe to another user' });
       return;
     }
 
@@ -138,10 +147,10 @@ class DashboardGateway {
 
   async handleGetVestingState(socket, data) {
     try {
-      const { userAddress } = data;
-      
-      if (!userAddress || userAddress !== socket.userAddress) {
-        socket.emit('error', { message: 'Invalid user address' });
+      const userAddress = (data && data.userAddress) || socket.userAddress;
+
+      if (!this.guard.authorizeUserAccess(socket, data && data.userAddress)) {
+        socket.emit('error', { message: 'Forbidden: cannot access another user' });
         return;
       }
 
@@ -155,10 +164,10 @@ class DashboardGateway {
 
   async handleGetDashboardData(socket, data) {
     try {
-      const { userAddress } = data;
-      
-      if (!userAddress || userAddress !== socket.userAddress) {
-        socket.emit('error', { message: 'Invalid user address' });
+      const userAddress = (data && data.userAddress) || socket.userAddress;
+
+      if (!this.guard.authorizeUserAccess(socket, data && data.userAddress)) {
+        socket.emit('error', { message: 'Forbidden: cannot access another user' });
         return;
       }
 
@@ -172,15 +181,18 @@ class DashboardGateway {
 
   handleDisconnection(socket) {
     const userAddress = this.userSockets.get(socket.id);
-    
+
     if (userAddress && this.connectedUsers.has(userAddress)) {
       this.connectedUsers.get(userAddress).delete(socket.id);
       if (this.connectedUsers.get(userAddress).size === 0) {
         this.connectedUsers.delete(userAddress);
       }
     }
-    
+
     this.userSockets.delete(socket.id);
+
+    // Free the per-IP / per-user connection slots and audit the disconnect.
+    this.guard.release(socket);
     console.log(`Client disconnected: ${socket.id}`);
   }
 
@@ -388,7 +400,8 @@ class DashboardGateway {
     return {
       totalConnections: this.io.sockets.sockets.size,
       connectedUsers: this.connectedUsers.size,
-      users: Array.from(this.connectedUsers.keys())
+      users: Array.from(this.connectedUsers.keys()),
+      limits: this.guard.getStats()
     };
   }
 }

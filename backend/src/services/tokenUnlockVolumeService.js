@@ -26,8 +26,13 @@ class TokenUnlockVolumeService {
         orgId,
         vaultTags,
         months = this.defaultProjectionMonths,
-        startDate = new Date()
       } = options;
+
+      // Default/validate the start date — coerce missing or invalid input to today.
+      let startDate = options.startDate ? new Date(options.startDate) : new Date();
+      if (isNaN(startDate.getTime())) {
+        startDate = new Date();
+      }
 
       // Get all active vaults with their schedules
       const vaults = await this.getVaultsWithSchedules({
@@ -150,15 +155,15 @@ class TokenUnlockVolumeService {
           if (dailyUnlocks[dateKey]) {
             // Add to daily totals
             const totalAmount = parseFloat(dailyUnlocks[dateKey].totalUnlockAmount) + parseFloat(event.amount);
-            dailyUnlocks[dateKey].totalUnlockAmount = totalAmount.toFixed(18);
+            dailyUnlocks[dateKey].totalUnlockAmount = totalAmount.toFixed(7);
             
             // Categorize unlock type
             if (event.type === 'cliff') {
               const cliffAmount = parseFloat(dailyUnlocks[dateKey].cliffUnlocks) + parseFloat(event.amount);
-              dailyUnlocks[dateKey].cliffUnlocks = cliffAmount.toFixed(18);
+              dailyUnlocks[dateKey].cliffUnlocks = cliffAmount.toFixed(7);
             } else {
               const vestingAmount = parseFloat(dailyUnlocks[dateKey].vestingUnlocks) + parseFloat(event.amount);
-              dailyUnlocks[dateKey].vestingUnlocks = vestingAmount.toFixed(18);
+              dailyUnlocks[dateKey].vestingUnlocks = vestingAmount.toFixed(7);
             }
 
             // Add to vault breakdown
@@ -180,7 +185,7 @@ class TokenUnlockVolumeService {
     for (const dateKey of sortedDates) {
       const dayData = dailyUnlocks[dateKey];
       cumulativeUnlocked += parseFloat(dayData.totalUnlockAmount);
-      dayData.cumulativeUnlocked = cumulativeUnlocked.toFixed(18);
+      dayData.cumulativeUnlocked = cumulativeUnlocked.toFixed(7);
 
       // Sort vaults by unlock amount for this day
       dayData.vaultBreakdown.sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount));
@@ -221,7 +226,7 @@ class TokenUnlockVolumeService {
         if (cliffAmount > 0) {
           unlockEvents.push({
             date: cliffDate,
-            amount: cliffAmount.toFixed(18),
+            amount: cliffAmount.toFixed(7),
             type: 'cliff'
           });
         }
@@ -230,7 +235,7 @@ class TokenUnlockVolumeService {
 
     // Calculate daily vesting unlocks
     const vestingStart = new Date(vesting_start_date);
-    const vestingEnd = new Date(vesting_start_date.getTime() + (vesting_duration * 1000));
+    const vestingEnd = new Date(vestingStart.getTime() + (vesting_duration * 1000));
     const dailyVestingRate = remainingAmount / (vesting_duration / (24 * 60 * 60)); // tokens per second
 
     // Generate daily vesting events
@@ -246,7 +251,7 @@ class TokenUnlockVolumeService {
       const dailyUnlock = dailyVestingRate * 24 * 60 * 60; // tokens per day
       unlockEvents.push({
         date: new Date(date),
-        amount: dailyUnlock.toFixed(18),
+        amount: dailyUnlock.toFixed(7),
         type: 'vesting'
       });
     }
@@ -298,11 +303,11 @@ class TokenUnlockVolumeService {
     // Calculate average daily unlocks
     const activeDays = dailyValues.filter(day => parseFloat(day.totalUnlockAmount) > 0);
     const avgDailyUnlocks = activeDays.length > 0 ? 
-      (totalUnlocks / activeDays.length).toFixed(18) : '0';
+      (totalUnlocks / activeDays.length).toFixed(7) : '0';
 
     return {
       summary: {
-        totalProjectedUnlocks: totalUnlocks.toFixed(18),
+        totalProjectedUnlocks: totalUnlocks.toFixed(7),
         averageDailyUnlocks: avgDailyUnlocks,
         peakUnlockDay: sortedByVolume[0] ? {
           date: sortedByVolume[0].date,
@@ -344,13 +349,13 @@ class TokenUnlockVolumeService {
       const monthData = monthlyData[month];
       monthData.totalUnlocks = (
         parseFloat(monthData.totalUnlocks) + parseFloat(dayData.totalUnlockAmount)
-      ).toFixed(18);
+      ).toFixed(7);
       monthData.cliffUnlocks = (
         parseFloat(monthData.cliffUnlocks) + parseFloat(dayData.cliffUnlocks)
-      ).toFixed(18);
+      ).toFixed(7);
       monthData.vestingUnlocks = (
         parseFloat(monthData.vestingUnlocks) + parseFloat(dayData.vestingUnlocks)
-      ).toFixed(18);
+      ).toFixed(7);
 
       if (parseFloat(dayData.totalUnlockAmount) > 0) {
         monthData.activeDays++;
@@ -420,7 +425,11 @@ class TokenUnlockVolumeService {
 
     return riskPeriods.map(period => ({
       ...period,
-      averageDailyUnlocks: (period.totalUnlocks / period.days).toFixed(18),
+      // Emit amounts as fixed-precision strings, consistent with every other
+      // amount this service returns (the raw accumulator values are numbers).
+      peakAmount: period.peakAmount.toFixed(7),
+      totalUnlocks: period.totalUnlocks.toFixed(7),
+      averageDailyUnlocks: (period.totalUnlocks / period.days).toFixed(7),
       riskLevel: this.calculateRiskLevel(period.totalUnlocks, mean, stdDev)
     }));
   }
@@ -538,11 +547,11 @@ class TokenUnlockVolumeService {
         data: {
           summary: {
             totalVaults: vaults.length,
-            totalAllocated: totalAllocated.toFixed(18),
-            totalUnlockedToDate: totalUnlockedToDate.toFixed(18),
-            remainingLocked: remainingLocked.toFixed(18),
+            totalAllocated: totalAllocated.toFixed(7),
+            totalUnlockedToDate: totalUnlockedToDate.toFixed(7),
+            remainingLocked: remainingLocked.toFixed(7),
             unlockProgressPercentage: unlockProgress.toFixed(2),
-            recentUnlocks30Days: recentUnlocks.toFixed(18)
+            recentUnlocks30Days: recentUnlocks.toFixed(7)
           },
           lastUpdated: today.toISOString()
         }

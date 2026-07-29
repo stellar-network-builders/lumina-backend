@@ -34,6 +34,17 @@ backgroundJobManager.init();
 
 dotenv.config();
 
+// Keep the HTTP server alive when a background service (Soroban RPC poller,
+// path-payment listener, indexing jobs, etc.) throws asynchronously. Without
+// these handlers an unhandled rejection terminates the whole process in modern
+// Node, taking the API down with it.
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection (continuing):', reason && reason.message ? reason.message : reason);
+});
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception (continuing):', error && error.message ? error.message : error);
+});
+
 const app = express();
 
 // --- NestJS Integration Start ---

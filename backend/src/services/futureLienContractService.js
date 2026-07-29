@@ -1,12 +1,13 @@
 'use strict';
 
-const { Server, TransactionBuilder, Networks, Operation, Asset, Keypair } = require('stellar-sdk');
+// stellar-sdk v11 replaced the old top-level `Server` with `Horizon.Server`.
+const { Horizon, TransactionBuilder, Networks, Operation, Asset, Keypair } = require('stellar-sdk');
 const auditLogger = require('./auditLogger');
 
 class FutureLienContractService {
   constructor() {
     // Initialize Stellar server based on environment
-    this.server = new Server(
+    this.server = new Horizon.Server(
       process.env.STELLAR_HORIZON_URL || 'https://horizon-testnet.stellar.org'
     );
     

@@ -6,7 +6,48 @@ class AuditLogger {
     this.logFilePath = path.join(__dirname, '../../logs/audit.log');
     // Dedicated channel for slow database queries (issue #8).
     this.slowQueryLogPath = path.join(__dirname, '../../logs/slow_queries.log');
+    // Dedicated channel for WebSocket connection events (issue #6).
+    this.websocketLogPath = path.join(__dirname, '../../logs/websocket_audit.log');
     this.ensureLogDirectory();
+  }
+
+  /**
+   * Append a WebSocket connection event to the dedicated websocket audit channel.
+   * @param {{event:string, socketId?:string, ip?:string, address?:string, reason?:string, timestamp?:string}} entry
+   */
+  logWebsocketEvent(entry) {
+    const timestamp = entry.timestamp || new Date().toISOString();
+    const parts = [
+      `[${timestamp}]`,
+      `[${entry.event}]`,
+      `[ip:${entry.ip || 'unknown'}]`,
+      `[user:${entry.address || 'anonymous'}]`,
+      `[socket:${entry.socketId || '-'}]`,
+    ];
+    if (entry.reason) parts.push(`[reason:${entry.reason}]`);
+    const logEntry = parts.join(' ') + '\n';
+
+    try {
+      fs.appendFileSync(this.websocketLogPath, logEntry);
+    } catch (error) {
+      console.error('Failed to write to websocket audit log:', error);
+    }
+  }
+
+  getWebsocketEntries() {
+    try {
+      if (!fs.existsSync(this.websocketLogPath)) {
+        return [];
+      }
+      return fs
+        .readFileSync(this.websocketLogPath, 'utf8')
+        .split('\n')
+        .filter((line) => line.trim() !== '')
+        .reverse();
+    } catch (error) {
+      console.error('Failed to read websocket audit log:', error);
+      return [];
+    }
   }
 
   ensureLogDirectory() {

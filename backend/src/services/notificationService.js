@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { Vault, SubSchedule, Beneficiary, Notification, DeviceToken, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const emailService = require('./emailService');
@@ -15,7 +16,7 @@ class NotificationService {
    */
   async notifyIntegrityFailure(vault) {
     try {
-      console.log(`CRITICAL: Integrity failure detected for vault ${vault.address}. Notifying beneficiaries...`);
+      logger.info(`CRITICAL: Integrity failure detected for vault ${vault.address}. Notifying beneficiaries...`);
       
       const beneficiaries = await Beneficiary.findAll({
         where: { vault_id: vault.id }
@@ -26,9 +27,9 @@ class NotificationService {
         if (beneficiary.email) {
           try {
             await emailService.sendIntegrityFailureEmail(beneficiary.email, vault.address);
-            console.log(`Integrity failure email sent to ${beneficiary.email}`);
+            logger.info(`Integrity failure email sent to ${beneficiary.email}`);
           } catch (emailError) {
-            console.error(`Failed to send integrity failure email to ${beneficiary.email}:`, emailError);
+            logger.error(`Failed to send integrity failure email to ${beneficiary.email}:`, emailError);
           }
         }
 
@@ -38,9 +39,9 @@ class NotificationService {
           try {
             const tokens = deviceTokens.map(dt => dt.device_token);
             await firebaseService.sendIntegrityFailureNotification(tokens, vault.address);
-            console.log(`Integrity failure push notification sent to beneficiary ${beneficiary.address}`);
+            logger.info(`Integrity failure push notification sent to beneficiary ${beneficiary.address}`);
           } catch (pushError) {
-            console.error(`Failed to send integrity failure push notification to ${beneficiary.address}:`, pushError);
+            logger.error(`Failed to send integrity failure push notification to ${beneficiary.address}:`, pushError);
           }
         }
 
@@ -53,7 +54,7 @@ class NotificationService {
         });
       }
     } catch (error) {
-      console.error(`Error notifying integrity failure for vault ${vault.address}:`, error);
+      logger.error(`Error notifying integrity failure for vault ${vault.address}:`, error);
     }
   }
 
@@ -63,10 +64,10 @@ class NotificationService {
   start() {
     // Run every hour
     this.cronJob = cron.schedule('0 * * * *', async () => {
-      console.log('Running cliff notification cron job...');
+      logger.info('Running cliff notification cron job...');
       await this.checkAndNotifyCliffs();
     });
-    console.log('Cliff notification cron job started.');
+    logger.info('Cliff notification cron job started.');
   }
 
   /**
@@ -129,7 +130,7 @@ class NotificationService {
       }
 
     } catch (error) {
-      console.error('Error in checkAndNotifyCliffs:', error);
+      logger.error('Error in checkAndNotifyCliffs:', error);
     }
   }
 
@@ -156,7 +157,7 @@ class NotificationService {
       });
 
       if (!existingNotification) {
-        console.log(`Sending ${type} notifications to beneficiary ${beneficiary.email || beneficiary.id} for vault ${vault.vault_address}`);
+        logger.info(`Sending ${type} notifications to beneficiary ${beneficiary.email || beneficiary.id} for vault ${vault.vault_address}`);
         
         let emailSent = false;
         let pushSent = false;
@@ -183,9 +184,9 @@ class NotificationService {
               vault.token_symbol || 'tokens'
             );
             pushSent = pushResponse.successCount > 0;
-            console.log(`Push notifications sent to ${pushResponse.successCount}/${tokens.length} devices`);
+            logger.info(`Push notifications sent to ${pushResponse.successCount}/${tokens.length} devices`);
           } catch (pushError) {
-            console.error('Error sending push notifications:', pushError);
+            logger.error('Error sending push notifications:', pushError);
           }
         }
         
@@ -199,14 +200,14 @@ class NotificationService {
             sent_at: new Date()
           }, { transaction });
           
-          console.log(`Notification recorded in DB for beneficiary ${beneficiary.email || beneficiary.id}`);
+          logger.info(`Notification recorded in DB for beneficiary ${beneficiary.email || beneficiary.id}`);
         }
       }
 
       await transaction.commit();
     } catch (error) {
       await transaction.rollback();
-      console.error(`Failed to process notification for beneficiary ${beneficiary.id}:`, error);
+      logger.error(`Failed to process notification for beneficiary ${beneficiary.id}:`, error);
     }
   }
 
@@ -234,7 +235,7 @@ class NotificationService {
           is_active: true,
           last_used_at: new Date()
         });
-        console.log(`Updated existing device token for user ${userAddress}`);
+        logger.info(`Updated existing device token for user ${userAddress}`);
         return existingToken;
       } else {
         // Create new token
@@ -245,11 +246,11 @@ class NotificationService {
           app_version: appVersion,
           is_active: true
         });
-        console.log(`Registered new device token for user ${userAddress}`);
+        logger.info(`Registered new device token for user ${userAddress}`);
         return newToken;
       }
     } catch (error) {
-      console.error('Error registering device token:', error);
+      logger.error('Error registering device token:', error);
       throw error;
     }
   }
@@ -265,10 +266,10 @@ class NotificationService {
         { is_active: false },
         { where: { device_token: deviceToken } }
       );
-      console.log(`Unregistered device token: ${deviceToken}`);
+      logger.info(`Unregistered device token: ${deviceToken}`);
       return result[0] > 0;
     } catch (error) {
-      console.error('Error unregistering device token:', error);
+      logger.error('Error unregistering device token:', error);
       throw error;
     }
   }
@@ -288,7 +289,7 @@ class NotificationService {
         order: [['last_used_at', 'DESC']]
       });
     } catch (error) {
-      console.error('Error fetching user device tokens:', error);
+      logger.error('Error fetching user device tokens:', error);
       throw error;
     }
   }

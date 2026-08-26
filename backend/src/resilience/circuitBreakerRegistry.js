@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const CircuitBreaker = require('./circuitBreaker');
 
 /**
@@ -134,7 +135,7 @@ class CircuitBreakerRegistry {
     this._safe(async () => {
       const failover = this._failover();
       if (failover && typeof failover.emergencyReadFromMaster === 'function') {
-        console.warn(`⚡ DB circuit '${serviceName}' opened — triggering emergency failover`);
+        logger.warn(`⚡ DB circuit '${serviceName}' opened — triggering emergency failover`);
         await failover.emergencyReadFromMaster();
       }
     });
@@ -201,10 +202,10 @@ class CircuitBreakerRegistry {
     try {
       const result = fn();
       if (result && typeof result.catch === 'function') {
-        result.catch((err) => console.error('[circuit-breaker-registry] async side-effect failed:', err.message));
+        result.catch((err) => logger.error('[circuit-breaker-registry] async side-effect failed:', err.message));
       }
     } catch (err) {
-      console.error('[circuit-breaker-registry] side-effect failed:', err.message);
+      logger.error('[circuit-breaker-registry] side-effect failed:', err.message);
     }
   }
 }

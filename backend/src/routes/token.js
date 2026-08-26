@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db'); // adjust if your db import is different
+const db = require('../db');
+const logger = require('../utils/logger');
 
 // GET /api/token/:address/supply
 router.get('/:address/supply', async (req, res) => {
@@ -31,7 +32,7 @@ router.get('/:address/supply', async (req, res) => {
       totalUnvested
     });
   } catch (err) {
-    console.error(err);
+    logger.error('Token supply query error:', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });

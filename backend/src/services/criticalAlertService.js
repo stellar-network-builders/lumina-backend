@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const axios = require('axios');
 
 class CriticalAlertService {
@@ -43,7 +44,7 @@ class CriticalAlertService {
     }
 
     if (deliveries.length === 0) {
-      console.warn(
+      logger.warn(
         'No critical alert webhook configured for vault balance monitoring. ' +
           'Set VAULT_BALANCE_MONITOR_SLACK_WEBHOOK_URL and/or VAULT_BALANCE_MONITOR_DISCORD_WEBHOOK_URL.'
       );

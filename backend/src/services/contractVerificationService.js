@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const crypto = require('crypto');
 const ApprovedContractRegistry = require('../models/approvedContractRegistry');
 const { sequelize } = require('../database/connection');
@@ -59,7 +60,7 @@ class ContractVerificationService {
 
       return result;
     } catch (error) {
-      console.error('Error verifying contract:', error);
+      logger.error('Error verifying contract:', error);
       return {
         valid: false,
         error: 'Verification service error',
@@ -147,7 +148,7 @@ class ContractVerificationService {
       // Clear cache
       this.clearCache(contractAddress);
       
-      console.log(`Contract ${contractAddress} has been blacklisted: ${reason}`);
+      logger.info(`Contract ${contractAddress} has been blacklisted: ${reason}`);
     }
 
     return success;
@@ -218,7 +219,7 @@ class ContractVerificationService {
    */
   async logVerificationAttempt({ contractAddress, wasmHash, requesterAddress, result }) {
     // This could be integrated with an audit logging service
-    console.log(`Contract verification: ${contractAddress} by ${requesterAddress} - ${result.valid ? 'APPROVED' : 'REJECTED'}`);
+    logger.info(`Contract verification: ${contractAddress} by ${requesterAddress} - ${result.valid ? 'APPROVED' : 'REJECTED'}`);
   }
 }
 

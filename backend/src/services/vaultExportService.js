@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { Vault, Beneficiary, Organization } = require('../models');
 const { Op } = require('sequelize');
 
@@ -37,7 +38,7 @@ class VaultExportService {
 
       return vault;
     } catch (error) {
-      console.error('Error fetching vault data for export:', error);
+      logger.error('Error fetching vault data for export:', error);
       throw error;
     }
   }
@@ -122,7 +123,7 @@ class VaultExportService {
       // End the stream
       stream.end();
     } catch (error) {
-      console.error('Error streaming vault as CSV:', error);
+      logger.error('Error streaming vault as CSV:', error);
       stream.destroy(error);
     }
   }

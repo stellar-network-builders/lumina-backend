@@ -1,5 +1,6 @@
 'use strict';
 
+const logger = require('../utils/logger');
 const { CleanupTask, CleanupReward, Vault, SubSchedule, Beneficiary } = require('../models');
 const { sequelize } = require('../database/connection');
 const auditLogger = require('./auditLogger');
@@ -109,7 +110,7 @@ class CleanupService {
       };
 
     } catch (error) {
-      console.error('Error checking cleanup eligibility:', error);
+      logger.error('Error checking cleanup eligibility:', error);
       throw error;
     }
   }
@@ -209,7 +210,7 @@ class CleanupService {
 
     } catch (error) {
       await transaction.rollback();
-      console.error('Error creating cleanup task:', error);
+      logger.error('Error creating cleanup task:', error);
       throw error;
     }
   }
@@ -252,7 +253,7 @@ class CleanupService {
       return tasks;
 
     } catch (error) {
-      console.error('Error getting available rewards:', error);
+      logger.error('Error getting available rewards:', error);
       throw error;
     }
   }
@@ -329,7 +330,7 @@ class CleanupService {
 
     } catch (error) {
       await transaction.rollback();
-      console.error('Error claiming reward:', error);
+      logger.error('Error claiming reward:', error);
       throw error;
     }
   }
@@ -365,7 +366,7 @@ class CleanupService {
       return reward;
 
     } catch (error) {
-      console.error('Error updating reward status:', error);
+      logger.error('Error updating reward status:', error);
       throw error;
     }
   }
@@ -424,7 +425,7 @@ class CleanupService {
       };
 
     } catch (error) {
-      console.error('Error getting cleanup stats:', error);
+      logger.error('Error getting cleanup stats:', error);
       throw error;
     }
   }
@@ -444,7 +445,7 @@ class CleanupService {
       }, 0);
 
     } catch (error) {
-      console.error('Error calculating total withdrawn:', error);
+      logger.error('Error calculating total withdrawn:', error);
       return 0;
     }
   }
@@ -485,7 +486,7 @@ class CleanupService {
       return task;
 
     } catch (error) {
-      console.error('Error cancelling cleanup task:', error);
+      logger.error('Error cancelling cleanup task:', error);
       throw error;
     }
   }

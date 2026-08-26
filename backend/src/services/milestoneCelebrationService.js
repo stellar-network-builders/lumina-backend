@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const axios = require('axios');
 const crypto = require('crypto');
 const MilestoneCelebrationWebhook = require('../models/milestoneCelebrationWebhook');
@@ -57,7 +58,7 @@ class MilestoneCelebrationService {
       });
 
       if (webhooks.length === 0) {
-        console.log(`No active webhooks found for milestone type: ${milestone.milestone_type}`);
+        logger.info(`No active webhooks found for milestone type: ${milestone.milestone_type}`);
         return { triggered: 0, message: 'No matching webhooks found' };
       }
 
@@ -83,7 +84,7 @@ class MilestoneCelebrationService {
       );
 
       if (validWebhooks.length === 0) {
-        console.log(`No webhooks meet the amount threshold for milestone: ${milestoneData.vestedAmount}`);
+        logger.info(`No webhooks meet the amount threshold for milestone: ${milestoneData.vestedAmount}`);
         return { triggered: 0, message: 'No webhooks meet amount threshold' };
       }
 
@@ -97,7 +98,7 @@ class MilestoneCelebrationService {
       const successful = results.filter(r => r.status === 'fulfilled').length;
       const failed = results.filter(r => r.status === 'rejected').length;
 
-      console.log(`Milestone celebration webhooks: ${successful} successful, ${failed} failed`);
+      logger.info(`Milestone celebration webhooks: ${successful} successful, ${failed} failed`);
 
       return {
         triggered: successful,
@@ -107,7 +108,7 @@ class MilestoneCelebrationService {
       };
 
     } catch (error) {
-      console.error('Error triggering milestone celebration:', error);
+      logger.error('Error triggering milestone celebration:', error);
       throw error;
     }
   }
@@ -164,14 +165,14 @@ class MilestoneCelebrationService {
       );
 
       if (result.success) {
-        console.log(`Webhook sent successfully to ${webhook.webhook_type}: ${webhook.webhook_url}${result.fromCache ? ' (from cache)' : ''}`);
+        logger.info(`Webhook sent successfully to ${webhook.webhook_type}: ${webhook.webhook_url}${result.fromCache ? ' (from cache)' : ''}`);
         return result.responseBody;
       }
 
       throw new Error(result.message || 'Milestone webhook operation failed');
 
     } catch (error) {
-      console.error(`Failed to send webhook to ${webhook.webhook_url}:`, error.message);
+      logger.error(`Failed to send webhook to ${webhook.webhook_url}:`, error.message);
       throw error;
     }
   }
@@ -290,7 +291,7 @@ class MilestoneCelebrationService {
       const webhook = await MilestoneCelebrationWebhook.create(webhookData);
       return webhook;
     } catch (error) {
-      console.error('Error creating celebration webhook:', error);
+      logger.error('Error creating celebration webhook:', error);
       throw error;
     }
   }
@@ -305,7 +306,7 @@ class MilestoneCelebrationService {
         order: [['created_at', 'DESC']]
       });
     } catch (error) {
-      console.error('Error fetching celebration webhooks:', error);
+      logger.error('Error fetching celebration webhooks:', error);
       throw error;
     }
   }
@@ -326,7 +327,7 @@ class MilestoneCelebrationService {
 
       return await MilestoneCelebrationWebhook.findByPk(webhookId);
     } catch (error) {
-      console.error('Error updating celebration webhook:', error);
+      logger.error('Error updating celebration webhook:', error);
       throw error;
     }
   }
@@ -346,7 +347,7 @@ class MilestoneCelebrationService {
 
       return true;
     } catch (error) {
-      console.error('Error deleting celebration webhook:', error);
+      logger.error('Error deleting celebration webhook:', error);
       throw error;
     }
   }

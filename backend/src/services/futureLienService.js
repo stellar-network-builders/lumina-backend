@@ -1,5 +1,6 @@
 'use strict';
 
+const logger = require('../utils/logger');
 const { GrantStream, FutureLien, LienRelease, LienMilestone, Vault, Beneficiary, sequelize } = require('../models');
 const vestingService = require('./vestingService');
 const auditLogger = require('./auditLogger');
@@ -173,7 +174,7 @@ class FutureLienService {
 
     } catch (error) {
       await transaction.rollback();
-      console.error('Error creating future lien:', error);
+      logger.error('Error creating future lien:', error);
       throw error;
     }
   }
@@ -444,7 +445,7 @@ class FutureLienService {
 
     } catch (error) {
       await transaction.rollback();
-      console.error('Error processing lien release:', error);
+      logger.error('Error processing lien release:', error);
       throw error;
     }
   }
@@ -511,7 +512,7 @@ class FutureLienService {
 
     } catch (error) {
       await transaction.rollback();
-      console.error('Error cancelling future lien:', error);
+      logger.error('Error cancelling future lien:', error);
       throw error;
     }
   }
@@ -595,7 +596,7 @@ class FutureLienService {
       };
 
     } catch (error) {
-      console.error('Error creating grant stream:', error);
+      logger.error('Error creating grant stream:', error);
       throw error;
     }
   }

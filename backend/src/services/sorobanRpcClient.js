@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const axios = require('axios');
 const Sentry = require('@sentry/node');
 const CircuitBreaker = require('../resilience/circuitBreaker');
@@ -105,13 +106,13 @@ class SorobanRpcClient {
 
     // Run initial health check immediately
     this._runHealthChecks().catch(err => {
-      console.warn('Initial health check failed:', err.message);
+      logger.warn('Initial health check failed:', err.message);
     });
 
     // Schedule periodic health checks
     this.healthCheckTimer = setInterval(() => {
       this._runHealthChecks().catch(err => {
-        console.warn('Periodic health check failed:', err.message);
+        logger.warn('Periodic health check failed:', err.message);
       });
     }, this.healthCheckInterval);
 
@@ -317,7 +318,7 @@ class SorobanRpcClient {
    */
   _logHealthTransition(endpoint, fromState, toState, reason) {
     const message = `[RPC Health] ${endpoint}: ${fromState} → ${toState} (${reason})`;
-    console.log(message);
+    logger.info(message);
 
     // Log to audit logger
     try {
@@ -329,7 +330,7 @@ class SorobanRpcClient {
         timestamp: new Date().toISOString(),
       }));
     } catch (err) {
-      console.warn('Failed to log health transition to audit logger:', err.message);
+      logger.warn('Failed to log health transition to audit logger:', err.message);
     }
 
     // Send to Sentry for monitoring
@@ -428,7 +429,7 @@ class SorobanRpcClient {
       if (cb) {
         const state = cb.getState();
         if (state.isOpen) {
-          console.warn(`Circuit breaker is OPEN for ${endpoint}, skipping to next endpoint`);
+          logger.warn(`Circuit breaker is OPEN for ${endpoint}, skipping to next endpoint`);
           continue;
         }
       }
@@ -474,13 +475,13 @@ class SorobanRpcClient {
               delay = this.maxRetryDelay;
             }
 
-            console.warn(`RPC call to ${endpoint} failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms:`, error.message);
+            logger.warn(`RPC call to ${endpoint} failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms:`, error.message);
             await this._delay(delay);
           }
         }
       }
       // All retries exhausted on this endpoint, try the next one
-      console.warn(`All retries exhausted for ${endpoint}, trying next endpoint`);
+      logger.warn(`All retries exhausted for ${endpoint}, trying next endpoint`);
     }
 
     // All endpoints exhausted
@@ -695,7 +696,7 @@ class SorobanRpcClient {
         // Counter is cumulative - same as above
       }
     } catch (err) {
-      console.warn('Failed to push RPC metrics to Prometheus:', err.message);
+      logger.warn('Failed to push RPC metrics to Prometheus:', err.message);
     }
   }
 
@@ -740,7 +741,7 @@ class SorobanRpcClient {
   addEndpoint(url, priority) {
     const exists = this.endpoints.some(ep => ep.url === url);
     if (exists) {
-      console.warn(`Endpoint ${url} already exists in configuration`);
+      logger.warn(`Endpoint ${url} already exists in configuration`);
       return;
     }
 
@@ -800,7 +801,7 @@ class SorobanRpcClient {
       this._autoSelectEndpoint();
     }
 
-    console.log(`Removed RPC endpoint: ${url}`);
+    logger.info(`Removed RPC endpoint: ${url}`);
   }
 
   /**

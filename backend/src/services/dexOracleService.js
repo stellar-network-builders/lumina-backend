@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const axios = require('axios');
 const stellarDexPriceService = require('./stellarDexPriceService');
 const priceService = require('./priceService');
@@ -49,7 +50,7 @@ class DexOracleService {
       const confidence = this.calculateConfidence(priceData.prices);
       
       if (confidence < minConfidence) {
-        console.warn(`Low confidence (${confidence}) for token ${tokenAddress} price`);
+        logger.warn(`Low confidence (${confidence}) for token ${tokenAddress} price`);
       }
 
       const result = {
@@ -71,7 +72,7 @@ class DexOracleService {
 
       return result;
     } catch (error) {
-      console.error(`Error getting oracle price for ${tokenAddress}:`, error);
+      logger.error(`Error getting oracle price for ${tokenAddress}:`, error);
       throw error;
     }
   }
@@ -119,7 +120,7 @@ class DexOracleService {
 
       return result;
     } catch (error) {
-      console.error(`Error getting historical oracle price for ${tokenAddress}:`, error);
+      logger.error(`Error getting historical oracle price for ${tokenAddress}:`, error);
       throw error;
     }
   }
@@ -132,7 +133,7 @@ class DexOracleService {
     const pricePromises = sources.map(source => 
       this.getPriceFromSource(tokenAddress, source, timeout)
         .catch(error => {
-          console.warn(`Failed to get price from ${source} for ${tokenAddress}:`, error.message);
+          logger.warn(`Failed to get price from ${source} for ${tokenAddress}:`, error.message);
           return null;
         })
     );
@@ -167,7 +168,7 @@ class DexOracleService {
     const pricePromises = sources.map(source => 
       this.getHistoricalPriceFromSource(tokenAddress, date, source)
         .catch(error => {
-          console.warn(`Failed to get historical price from ${source} for ${tokenAddress}:`, error.message);
+          logger.warn(`Failed to get historical price from ${source} for ${tokenAddress}:`, error.message);
           return null;
         })
     );

@@ -11,6 +11,7 @@ const { rateLimit } = require('express-rate-limit');
 const { walletRateLimitMiddleware } = require('./middleware/wallet-ratelimit.middleware');
 const { smartCompression } = require('./middleware/compression.middleware');
 const { paginateWithCursor, validateCursorParams } = require('./services/cursorPaginationService');
+const logger = require('./utils/logger');
 
 const Sentry = require('@sentry/node');
 const { nodeProfilingIntegration } = require('@sentry/profiling-node');
@@ -39,10 +40,10 @@ dotenv.config();
 // these handlers an unhandled rejection terminates the whole process in modern
 // Node, taking the API down with it.
 process.on('unhandledRejection', (reason) => {
-  console.error('Unhandled promise rejection (continuing):', reason && reason.message ? reason.message : reason);
+  logger.error('Unhandled promise rejection (continuing):', reason && reason.message ? reason.message : reason);
 });
 process.on('uncaughtException', (error) => {
-  console.error('Uncaught exception (continuing):', error && error.message ? error.message : error);
+  logger.error('Uncaught exception (continuing):', error && error.message ? error.message : error);
 });
 
 const app = express();
@@ -62,7 +63,7 @@ const initNest = async () => {
   app.set('pdfQueue', pdfQueue);
   app.set('exportQueue', exportQueue);
 
-  console.log('NestJS bridge established');
+  logger.info('NestJS bridge established');
 };
 
 // Global rate limiting middleware using NestJS Throttler
@@ -94,7 +95,7 @@ app.use(async (req, res, next) => {
     }
     next();
   } catch (e) {
-    console.error("Throttler error:", e);
+    logger.error("Throttler error:", e);
     next();
   }
 });
@@ -198,7 +199,7 @@ const isAdminOfOrg = async (adminAddress, orgId) => {
     });
     return !!org;
   } catch (err) {
-    console.error("Error in isAdminOfOrg:", err);
+    logger.error("Error in isAdminOfOrg:", err);
     return false;
   }
 };
@@ -229,7 +230,7 @@ app.post("/api/admin/webhooks", async (req, res) => {
     });
     res.status(201).json({ success: true, data: webhook });
   } catch (error) {
-    console.error("Error registering webhook:", error);
+    logger.error("Error registering webhook:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -322,7 +323,7 @@ app.get("/admin/db/pool-status", (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error fetching DB pool status:", error);
+    logger.error("Error fetching DB pool status:", error);
     res.status(500).json({ success: false, error: "Failed to fetch DB pool status" });
   }
 });
@@ -355,7 +356,7 @@ app.get("/health/ready", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Health check failed:", error);
+    logger.error("Health check failed:", error);
     res.status(503).json({
       status: "not_ready",
       timestamp: new Date().toISOString(),
@@ -447,7 +448,7 @@ app.post("/api/auth/login", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Login error:", error);
+    logger.error("Login error:", error);
     res.status(500).json({
       success: false,
       error: error.message || "Login failed",
@@ -489,7 +490,7 @@ app.post("/api/auth/refresh", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Token refresh error:", error);
+    logger.error("Token refresh error:", error);
 
     // Clear invalid refresh token cookie
     authService.clearRefreshTokenCookie(res);
@@ -513,7 +514,7 @@ app.post("/api/auth/logout", async (req, res) => {
         await authService.revokeAllUserTokens(decoded.address);
       } catch (error) {
         // Token might be invalid, but still clear cookie
-        console.log("Invalid token during logout:", error.message);
+        logger.info("Invalid token during logout:", error.message);
       }
     }
 
@@ -525,7 +526,7 @@ app.post("/api/auth/logout", async (req, res) => {
       message: "Logged out successfully",
     });
   } catch (error) {
-    console.error("Logout error:", error);
+    logger.error("Logout error:", error);
     res.status(500).json({
       success: false,
       error: error.message || "Logout failed",
@@ -546,7 +547,7 @@ app.get("/api/auth/me", authService.authenticate(), async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Get user info error:", error);
+    logger.error("Get user info error:", error);
     res.status(500).json({
       success: false,
       error: error.message || "Failed to get user info",
@@ -692,7 +693,7 @@ app.post("/api/vaults", async (req, res) => {
     const vault = await vestingService.createVault(req.body);
     res.status(201).json({ success: true, data: vault });
   } catch (error) {
-    console.error("Error creating vault:", error);
+    logger.error("Error creating vault:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -707,7 +708,7 @@ app.post("/api/vaults/:vaultAddress/top-up", async (req, res) => {
     });
     res.status(201).json({ success: true, data: subSchedule });
   } catch (error) {
-    console.error("Error processing top-up:", error);
+    logger.error("Error processing top-up:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -723,7 +724,7 @@ app.get("/api/vaults/:vaultAddress/schedule", async (req, res) => {
     );
     res.json({ success: true, data: schedule });
   } catch (error) {
-    console.error("Error fetching vesting schedule:", error);
+    logger.error("Error fetching vesting schedule:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -742,7 +743,7 @@ app.get(
       );
       res.json({ success: true, data: result });
     } catch (error) {
-      console.error("Error calculating withdrawable amount:", error);
+      logger.error("Error calculating withdrawable amount:", error);
       res.status(500).json({ success: false, error: error.message });
     }
   },
@@ -761,7 +762,7 @@ app.post(
       });
       res.json({ success: true, data: result });
     } catch (error) {
-      console.error("Error processing withdrawal:", error);
+      logger.error("Error processing withdrawal:", error);
       res.status(500).json({ success: false, error: error.message });
     }
   },
@@ -774,7 +775,7 @@ app.get("/api/vaults/:vaultAddress/summary", async (req, res) => {
     const summary = await vestingService.getVaultSummary(vaultAddress);
     res.json({ success: true, data: summary });
   } catch (error) {
-    console.error("Error fetching vault summary:", error);
+    logger.error("Error fetching vault summary:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -813,7 +814,7 @@ app.post(
         },
       });
     } catch (error) {
-      console.error("Error hashing legal document:", error);
+      logger.error("Error hashing legal document:", error);
       const status = error.message.includes("not found")
         ? 404
         : error.message.includes("permission")
@@ -853,7 +854,7 @@ app.get(
         },
       });
     } catch (error) {
-      console.error("Error fetching legal document fingerprint:", error);
+      logger.error("Error fetching legal document fingerprint:", error);
       const status = error.message.includes("not found")
         ? 404
         : error.message.includes("permission")
@@ -882,7 +883,7 @@ app.post(
         data: result,
       });
     } catch (error) {
-      console.error("Error verifying legal document fingerprint:", error);
+      logger.error("Error verifying legal document fingerprint:", error);
       const status = error.message.includes("not found")
         ? 404
         : error.message.includes("permission")
@@ -916,7 +917,7 @@ app.post("/api/merkle-vault/build-tree", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error building Merkle tree:", error);
+    logger.error("Error building Merkle tree:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -930,7 +931,7 @@ app.post("/api/claims", claimRateLimiter, async (req, res) => {
 
     res.status(201).json({ success: true, data: claim });
   } catch (error) {
-    console.error("Error processing claim:", error);
+    logger.error("Error processing claim:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -947,7 +948,7 @@ app.post("/api/claims/batch", claimRateLimiter, async (req, res) => {
 
     res.json({ success: true, data: result });
   } catch (error) {
-    console.error("Error processing batch claims:", error);
+    logger.error("Error processing batch claims:", error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -963,7 +964,7 @@ app.post("/api/claims/backfill-prices", claimRateLimiter, async (req, res) => {
       message: `Backfilled prices for ${processedCount} claims`,
     });
   } catch (error) {
-    console.error("Error backfilling prices:", error);
+    logger.error("Error backfilling prices:", error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -984,7 +985,7 @@ app.get("/api/claims/:userAddress/realized-gains", async (req, res) => {
 
     res.json({ success: true, data: gains });
   } catch (error) {
-    console.error("Error calculating realized gains:", error);
+    logger.error("Error calculating realized gains:", error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -1050,7 +1051,7 @@ app.post("/api/admin/batch-revoke", authService.authenticate(true), async (req, 
       },
     });
   } catch (error) {
-    console.error("Batch revocation error:", error);
+    logger.error("Batch revocation error:", error);
 
     // Handle specific error types
     let statusCode = 500;
@@ -1079,7 +1080,7 @@ app.post("/api/admin/revoke", async (req, res) => {
     );
     res.json({ success: true, data: result });
   } catch (error) {
-    console.error("Error revoking access:", error);
+    logger.error("Error revoking access:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1109,7 +1110,7 @@ app.post("/api/admin/clean-break", async (req, res) => {
 
     res.json({ success: true, data: result });
   } catch (error) {
-    console.error("Error executing clean break:", error);
+    logger.error("Error executing clean break:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1124,7 +1125,7 @@ app.post("/api/admin/create", async (req, res) => {
     );
     res.json({ success: true, data: result });
   } catch (error) {
-    console.error("Error creating vault:", error);
+    logger.error("Error creating vault:", error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -1142,7 +1143,7 @@ app.post("/api/admin/transfer", async (req, res) => {
     );
     res.json({ success: true, data: result });
   } catch (error) {
-    console.error("Error transferring vault:", error);
+    logger.error("Error transferring vault:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1170,7 +1171,7 @@ app.post("/api/admin/vault/privacy", async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Error toggling privacy mode:", error);
+    logger.error("Error toggling privacy mode:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1183,7 +1184,7 @@ app.get("/api/admin/audit-logs", async (req, res) => {
     );
     res.json({ success: true, data: result });
   } catch (error) {
-    console.error("Error fetching audit logs:", error);
+    logger.error("Error fetching audit logs:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1198,7 +1199,7 @@ app.post("/api/admin/propose-new-admin", async (req, res) => {
     );
     res.json({ success: true, data: result });
   } catch (error) {
-    console.error("Error proposing new admin:", error);
+    logger.error("Error proposing new admin:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1212,7 +1213,7 @@ app.post("/api/admin/accept-ownership", async (req, res) => {
     );
     res.json({ success: true, data: result });
   } catch (error) {
-    console.error("Error accepting ownership:", error);
+    logger.error("Error accepting ownership:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1227,7 +1228,7 @@ app.post("/api/admin/transfer-ownership", async (req, res) => {
     );
     res.json({ success: true, data: result });
   } catch (error) {
-    console.error("Error transferring ownership:", error);
+    logger.error("Error transferring ownership:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1238,7 +1239,7 @@ app.get("/api/admin/pending-transfers", async (req, res) => {
     const result = await adminService.getPendingTransfers(contractAddress);
     res.json({ success: true, data: result });
   } catch (error) {
-    console.error("Error fetching pending transfers:", error);
+    logger.error("Error fetching pending transfers:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1256,7 +1257,7 @@ app.get("/api/stats/tvl", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error fetching TVL stats:", error);
+    logger.error("Error fetching TVL stats:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1391,7 +1392,7 @@ app.post("/api/notifications/register-device", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error registering device token:", error);
+    logger.error("Error registering device token:", error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -1418,7 +1419,7 @@ app.delete("/api/notifications/unregister-device", async (req, res) => {
       data: { unregistered: success },
     });
   } catch (error) {
-    console.error("Error unregistering device token:", error);
+    logger.error("Error unregistering device token:", error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -1444,7 +1445,7 @@ app.get("/api/notifications/devices/:userAddress", async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error("Error fetching user device tokens:", error);
+    logger.error("Error fetching user device tokens:", error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -1487,7 +1488,7 @@ app.post(
         data: config,
       });
     } catch (error) {
-      console.error("Error creating multi-sig config:", error);
+      logger.error("Error creating multi-sig config:", error);
       res.status(500).json({
         success: false,
         error: error.message,
@@ -1519,7 +1520,7 @@ app.get(
         data: config,
       });
     } catch (error) {
-      console.error("Error getting multi-sig config:", error);
+      logger.error("Error getting multi-sig config:", error);
       res.status(500).json({
         success: false,
         error: error.message,
@@ -1559,7 +1560,7 @@ app.post(
         data: proposal,
       });
     } catch (error) {
-      console.error("Error creating revocation proposal:", error);
+      logger.error("Error creating revocation proposal:", error);
       res.status(500).json({
         success: false,
         error: error.message,
@@ -1583,7 +1584,7 @@ app.get(
         data: proposal,
       });
     } catch (error) {
-      console.error("Error getting proposal:", error);
+      logger.error("Error getting proposal:", error);
       res.status(500).json({
         success: false,
         error: error.message,
@@ -1608,7 +1609,7 @@ app.get(
         data: proposals,
       });
     } catch (error) {
-      console.error("Error getting pending proposals:", error);
+      logger.error("Error getting pending proposals:", error);
       res.status(500).json({
         success: false,
         error: error.message,
@@ -1644,7 +1645,7 @@ app.post(
         data: result,
       });
     } catch (error) {
-      console.error("Error adding signature:", error);
+      logger.error("Error adding signature:", error);
       res.status(500).json({
         success: false,
         error: error.message,
@@ -1666,7 +1667,7 @@ app.get(
         data: stats,
       });
     } catch (error) {
-      console.error("Error getting multi-sig stats:", error);
+      logger.error("Error getting multi-sig stats:", error);
       res.status(500).json({
         success: false,
         error: error.message,
@@ -1695,7 +1696,7 @@ app.get("/api/vaults/:id/export", async (req, res) => {
 
     res.download(outputPath);
   } catch (error) {
-    console.error("Error queueing CSV export:", error);
+    logger.error("Error queueing CSV export:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1713,7 +1714,7 @@ app.get("/api/vaults/:id/balance", async (req, res) => {
       data: balanceInfo.toJSON(),
     });
   } catch (error) {
-    console.error("Error querying vault balance:", error);
+    logger.error("Error querying vault balance:", error);
 
     if (error.message && error.message.includes("not found")) {
       res.status(404).json({
@@ -1801,7 +1802,7 @@ app.get("/api/vault/:id/agreement.pdf", async (req, res) => {
 
     res.download(outputPath);
   } catch (error) {
-    console.error("Error queueing PDF generation:", error);
+    logger.error("Error queueing PDF generation:", error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -1846,7 +1847,7 @@ res.json({
   data: result,
 });
   } catch (error) {
-  console.error("Error fetching token distribution:", error);
+  logger.error("Error fetching token distribution:", error);
   res.status(500).json({
     success: false,
     error: error.message,
@@ -1891,7 +1892,7 @@ app.post(
         data: dividendRound,
       });
     } catch (error) {
-      console.error("Error creating dividend round:", error);
+      logger.error("Error creating dividend round:", error);
       res.status(500).json({
         success: false,
         error: error.message,
@@ -1937,7 +1938,7 @@ app.post(
         data: dividendRound,
       });
     } catch (error) {
-      console.error("Error creating dividend round:", error);
+      logger.error("Error creating dividend round:", error);
       return res.status(500).json({
         success: false,
         error: error.message,
@@ -1959,7 +1960,7 @@ app.post(
         data: result,
       });
     } catch (error) {
-      console.error("Error taking dividend snapshot:", error);
+      logger.error("Error taking dividend snapshot:", error);
       res.status(500).json({
         success: false,
         error: error.message,
@@ -1984,7 +1985,7 @@ app.post(
         data: distributions,
       });
     } catch (error) {
-      console.error("Error calculating dividend distributions:", error);
+      logger.error("Error calculating dividend distributions:", error);
       res.status(500).json({
         success: false,
         error: error.message,
@@ -2008,7 +2009,7 @@ app.post(
         data: result,
       });
     } catch (error) {
-      console.error("Error distributing dividends:", error);
+      logger.error("Error distributing dividends:", error);
       res.status(500).json({
         success: false,
         error: error.message,
@@ -2032,7 +2033,7 @@ app.get(
         data: dividendRound,
       });
     } catch (error) {
-      console.error("Error getting dividend round:", error);
+      logger.error("Error getting dividend round:", error);
       res.status(500).json({
         success: false,
         error: error.message,
@@ -2060,7 +2061,7 @@ app.get(
         data: rounds,
       });
     } catch (error) {
-      console.error("Error getting dividend rounds:", error);
+      logger.error("Error getting dividend rounds:", error);
       res.status(500).json({
         success: false,
         error: error.message,
@@ -2109,7 +2110,7 @@ app.post("/api/statements/annual/generate", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error generating annual statement:", error);
+    logger.error("Error generating annual statement:", error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -2147,7 +2148,7 @@ app.get("/api/statements/annual/:userAddress/:year", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error getting annual statement:", error);
+    logger.error("Error getting annual statement:", error);
     if (error.message.includes('not found')) {
       res.status(404).json({
         success: false,
@@ -2199,7 +2200,7 @@ app.get("/api/statements/annual/:userAddress", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error getting user statements:", error);
+    logger.error("Error getting user statements:", error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -2221,7 +2222,7 @@ app.get("/api/statements/annual/:userAddress/:year/download", async (req, res) =
       data: { jobId: job.id }
     });
   } catch (error) {
-    console.error("Error queueing annual statement:", error);
+    logger.error("Error queueing annual statement:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -2282,7 +2283,7 @@ app.post("/api/statements/annual/verify", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error verifying statement:", error);
+    logger.error("Error verifying statement:", error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -2309,7 +2310,7 @@ app.get("/api/statements/annual/:userAddress/:year/summary", async (req, res) =>
       data: summary,
     });
   } catch (error) {
-    console.error("Error getting statement summary:", error);
+    logger.error("Error getting statement summary:", error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -2333,7 +2334,7 @@ app.get("/api/dividend/history/:userAddress", async (req, res) => {
       data: history,
     });
   } catch (error) {
-    console.error("Error getting dividend history:", error);
+    logger.error("Error getting dividend history:", error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -2354,7 +2355,7 @@ app.get(
         data: stats,
       });
     } catch (error) {
-      console.error("Error getting dividend stats:", error);
+      logger.error("Error getting dividend stats:", error);
       res.status(500).json({
         success: false,
         error: error.message,
@@ -2436,7 +2437,7 @@ app.get("/api/user/:address/consolidated", async (req, res) => {
           }
         });
       } catch (error) {
-        console.error('Error getting dividend history:', error);
+        logger.error('Error getting dividend history:', error);
         res.status(500).json({
           success: false,
           error: error.message
@@ -2462,7 +2463,7 @@ app.get("/api/user/:address/consolidated", async (req, res) => {
       data: mergeResult
     });
   } catch (error) {
-    console.error("Error consolidating accounts:", error);
+    logger.error("Error consolidating accounts:", error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -2482,25 +2483,25 @@ const startServer = async () => {
     // Initialize secrets service first
     try {
       await secretsService.initialize();
-      console.log('Secrets service initialized successfully.');
+      logger.info('Secrets service initialized successfully.');
     } catch (secretsError) {
-      console.error('Failed to initialize secrets service:', secretsError);
-      console.log('Continuing with environment variables...');
+      logger.error('Failed to initialize secrets service:', secretsError);
+      logger.info('Continuing with environment variables...');
     }
 
     // Get database connection with dynamic credentials
     const sequelize = await getSequelize();
     await sequelize.authenticate();
-    console.log("Database connection established successfully.");
+    logger.info("Database connection established successfully.");
 
     // Attach the connection pool monitor (metrics + adaptive sizing — issue #8)
     try {
       const connectionPoolMonitor = require("./database/connectionPoolMonitor");
       connectionPoolMonitor.attach(sequelize);
       connectionPoolMonitor.start();
-      console.log("Database connection pool monitor started.");
+      logger.info("Database connection pool monitor started.");
     } catch (poolMonitorError) {
-      console.error("Failed to start DB pool monitor:", poolMonitorError.message);
+      logger.error("Failed to start DB pool monitor:", poolMonitorError.message);
     }
 
     // In test/CI the database is an ephemeral in-memory SQLite. Some models use
@@ -2510,10 +2511,10 @@ const startServer = async () => {
     const isTestEnv = process.env.NODE_ENV === 'test';
     try {
       await sequelize.sync(isTestEnv ? { force: true } : {});
-      console.log("Database synchronized successfully.");
+      logger.info("Database synchronized successfully.");
     } catch (syncError) {
       if (isTestEnv) {
-        console.warn("Database sync issue in test mode; continuing:", syncError.parent?.message || syncError.message);
+        logger.warn("Database sync issue in test mode; continuing:", syncError.parent?.message || syncError.message);
       } else {
         throw syncError;
       }
@@ -2524,43 +2525,43 @@ const startServer = async () => {
       const sep12Module = new SEP12Module({ sequelize });
       await sep12Module.initialize();
       sep12Module.registerRoutes(app);
-      console.log('SEP-12 KYC Module initialized successfully.');
+      logger.info('SEP-12 KYC Module initialized successfully.');
     } catch (sep12Error) {
-      console.error('Failed to initialize SEP-12 KYC Module:', sep12Error);
-      console.log('Continuing without SEP-12 KYC functionality...');
+      logger.error('Failed to initialize SEP-12 KYC Module:', sep12Error);
+      logger.info('Continuing without SEP-12 KYC functionality...');
     }
 
     // Initialize Vesting Update WebSocket Server AFTER database is ready
     try {
       const VestingUpdateWebSocket = require('./websocket/vesting-update.websocket');
       const vestingUpdateWebSocket = new VestingUpdateWebSocket(httpServer);
-      console.log('WebSocket server initialized successfully.');
+      logger.info('WebSocket server initialized successfully.');
     } catch (wsError) {
-      console.error('Failed to initialize WebSocket:', wsError);
-      console.log('Continuing with REST API only...');
+      logger.error('Failed to initialize WebSocket:', wsError);
+      logger.info('Continuing with REST API only...');
     }
 
     // Initialize Dashboard Gateway for enhanced real-time updates
     try {
       const DashboardGateway = require('./websocket/dashboard-gateway.gateway');
       const dashboardGateway = new DashboardGateway(httpServer);
-      console.log('Dashboard Gateway initialized successfully.');
+      logger.info('Dashboard Gateway initialized successfully.');
     } catch (gatewayError) {
-      console.error('Failed to initialize Dashboard Gateway:', gatewayError);
-      console.log('Continuing without enhanced dashboard features...');
+      logger.error('Failed to initialize Dashboard Gateway:', gatewayError);
+      logger.info('Continuing without enhanced dashboard features...');
     }
 
     // Initialize Redis Cache
     try {
       await cacheService.connect();
       if (cacheService.isReady()) {
-        console.log("Redis cache connected successfully.");
+        logger.info("Redis cache connected successfully.");
       } else {
-        console.log("Redis cache not available, continuing without caching...");
+        logger.info("Redis cache not available, continuing without caching...");
       }
     } catch (cacheError) {
-      console.error("Failed to connect to Redis:", cacheError);
-      console.log("Continuing without Redis cache...");
+      logger.error("Failed to connect to Redis:", cacheError);
+      logger.info("Continuing without Redis cache...");
     }
 
     // Initialize GraphQL Server
@@ -2570,50 +2571,50 @@ const startServer = async () => {
       graphQLServer = new GraphQLServer(app, httpServer);
       await graphQLServer.start();
       await graphQLServer.applyMiddleware(app);
-      console.log("GraphQL Server initialized successfully.");
+      logger.info("GraphQL Server initialized successfully.");
 
       const serverInfo = graphQLServer.getServerInfo();
-      console.log(
+      logger.info(
         `GraphQL Playground available at: ${serverInfo.playgroundUrl}`,
       );
-      console.log(
+      logger.info(
         `GraphQL Subscriptions available at: ${serverInfo.subscriptionEndpoint}`,
       );
     } catch (graphqlError) {
-      console.error("Failed to initialize GraphQL Server:", graphqlError);
-      console.log("Continuing with REST API only...");
+      logger.error("Failed to initialize GraphQL Server:", graphqlError);
+      logger.info("Continuing with REST API only...");
     }
 
     // Initialize Discord Bot
     try {
       await discordBotService.start();
     } catch (discordError) {
-      console.error("Failed to initialize Discord Bot:", discordError);
-      console.log("Continuing without Discord bot...");
+      logger.error("Failed to initialize Discord Bot:", discordError);
+      logger.info("Continuing without Discord bot...");
     }
 
     // Initialize Monthly Report Job
     try {
       monthlyReportJob.start();
     } catch (jobError) {
-      console.error("Failed to initialize Monthly Report Job:", jobError);
+      logger.error("Failed to initialize Monthly Report Job:", jobError);
     }
 
     // Initialize Vault Reconciliation Job
     const vaultReconciliationJob = new VaultReconciliationJob();
     try {
       vaultReconciliationJob.start();
-      console.log("Vault Reconciliation Job started successfully.");
+      logger.info("Vault Reconciliation Job started successfully.");
     } catch (jobError) {
-      console.error("Failed to initialize Vault Reconciliation Job:", jobError);
+      logger.error("Failed to initialize Vault Reconciliation Job:", jobError);
     }
 
     // Initialize Notification Service
     try {
       notificationService.start();
-      console.log("Notification service started successfully.");
+      logger.info("Notification service started successfully.");
     } catch (notificationError) {
-      console.error(
+      logger.error(
         "Failed to initialize Notification Service:",
         notificationError,
       );
@@ -2622,42 +2623,42 @@ const startServer = async () => {
     // Initialize Vault Registry Indexing Job
     try {
       vaultRegistryIndexingJob.start();
-      console.log("Vault Registry Indexing Job started successfully.");
+      logger.info("Vault Registry Indexing Job started successfully.");
     } catch (jobError) {
-      console.error("Failed to initialize Vault Registry Indexing Job:", jobError);
+      logger.error("Failed to initialize Vault Registry Indexing Job:", jobError);
     }
 
     // Initialize Vault Balance Monitoring Job
     try {
       vaultBalanceMonitoringJob.start();
-      console.log("Vault Balance Monitoring Job started successfully.");
+      logger.info("Vault Balance Monitoring Job started successfully.");
     } catch (jobError) {
-      console.error("Failed to initialize Vault Balance Monitoring Job:", jobError);
+      logger.error("Failed to initialize Vault Balance Monitoring Job:", jobError);
     }
 
     // Initialize Vesting State Reconciliation Job
     try {
       const vestingStateReconciliationJob = new VestingStateReconciliationJob();
       vestingStateReconciliationJob.start();
-      console.log("Vesting State Reconciliation Job started successfully.");
+      logger.info("Vesting State Reconciliation Job started successfully.");
     } catch (jobError) {
-      console.error("Failed to initialize Vesting State Reconciliation Job:", jobError);
+      logger.error("Failed to initialize Vesting State Reconciliation Job:", jobError);
     }
 
     // Initialize claim webhook listener
     try {
       claimWebhookListenerService.start();
-      console.log("Claim Webhook Listener started successfully.");
+      logger.info("Claim Webhook Listener started successfully.");
     } catch (listenerError) {
-      console.error("Failed to initialize Claim Webhook Listener:", listenerError);
+      logger.error("Failed to initialize Claim Webhook Listener:", listenerError);
     }
 
     // Initialize Stellar Path Payment Listener
     try {
       stellarPathPaymentListener.start();
-      console.log("Stellar Path Payment Listener started successfully.");
+      logger.info("Stellar Path Payment Listener started successfully.");
     } catch (listenerError) {
-      console.error("Failed to initialize Stellar Path Payment Listener:", listenerError);
+      logger.error("Failed to initialize Stellar Path Payment Listener:", listenerError);
     }
 
     // Start background metrics collection
@@ -2676,7 +2677,7 @@ const startServer = async () => {
           totalIndexedBlocks.set(parseInt(maxBlock));
         }
       } catch (error) {
-        console.error('Error updating metrics:', error);
+        logger.error('Error updating metrics:', error);
       }
     }, 15000);
 
@@ -2684,10 +2685,10 @@ const startServer = async () => {
     // waiting on network-dependent background services (Soroban RPC, etc.) that
     // may be slow or unavailable in some environments.
     httpServer.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-      console.log(`REST API available at: http://localhost:${PORT}`);
+      logger.info(`Server is running on port ${PORT}`);
+      logger.info(`REST API available at: http://localhost:${PORT}`);
       if (graphQLServer) {
-        console.log(`GraphQL API available at: http://localhost:${PORT}/graphql`);
+        logger.info(`GraphQL API available at: http://localhost:${PORT}/graphql`);
       }
     });
 
@@ -2713,18 +2714,18 @@ const startServer = async () => {
       await sorobanEventPoller.start();
       await sorobanEventProcessor.startProcessing();
 
-      console.log("Soroban Event Poller and Processor services started successfully.");
+      logger.info("Soroban Event Poller and Processor services started successfully.");
 
       // Store services globally for access in routes
       global.sorobanEventPoller = sorobanEventPoller;
       global.sorobanEventProcessor = sorobanEventProcessor;
 
     } catch (sorobanError) {
-      console.error("Failed to initialize Soroban Event services:", sorobanError);
-      console.log("Continuing without Soroban event indexing...");
+      logger.error("Failed to initialize Soroban Event services:", sorobanError);
+      logger.info("Continuing without Soroban event indexing...");
     }
   } catch (error) {
-    console.error('Unable to start server:', error);
+    logger.error('Unable to start server:', error);
     process.exit(1);
   }
 };
@@ -2732,16 +2733,16 @@ const startServer = async () => {
 // ✅ Only start the server when run directly (not when imported by tests).
 if (require.main === module) {
   // Start KYC expiration worker
-  console.log('🔍 Starting KYC expiration monitoring worker...');
+  logger.info('🔍 Starting KYC expiration monitoring worker...');
   kycExpirationWorker.start();
 
   // Start GDPR compliance job
-  console.log('🔒 Starting GDPR compliance monitoring job...');
+  logger.info('🔒 Starting GDPR compliance monitoring job...');
   const gdprJob = new gdprComplianceJob();
   gdprJob.start();
 
   // Start Historical Price Tracking Job (SEP-40)
-  console.log('📊 Starting Historical Price Tracking Job...');
+  logger.info('📊 Starting Historical Price Tracking Job...');
   historicalPriceTrackingJob.start();
 
   startServer();

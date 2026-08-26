@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const backgroundJobManager = require('../workers/backgroundJobManager');
+const logger = require('../utils/logger');
 
 /**
  * GET /admin/queues/status
@@ -12,7 +13,7 @@ router.get('/status', async (req, res) => {
     const status = await backgroundJobManager.getQueuesStatus();
     res.json({ success: true, data: status });
   } catch (error) {
-    console.error('Error fetching queue status:', error);
+    logger.error('Error fetching queue status:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch queue status' });
   }
 });
@@ -28,7 +29,7 @@ router.get('/:queueName/failed', async (req, res) => {
     const jobs = await backgroundJobManager.queueService.getFailedJobs(queueName, parseInt(limit, 10));
     res.json({ success: true, data: { queueName, jobs, total: jobs.length } });
   } catch (error) {
-    console.error(`Error fetching failed jobs for ${req.params.queueName}:`, error);
+    logger.error(`Error fetching failed jobs for ${req.params.queueName}:`, error);
     res.status(500).json({ success: false, error: 'Failed to fetch failed jobs' });
   }
 });
@@ -53,7 +54,7 @@ router.get('/:queueName/dlq', async (req, res) => {
       },
     });
   } catch (error) {
-    console.error(`Error fetching DLQ jobs for ${req.params.queueName}:`, error);
+    logger.error(`Error fetching DLQ jobs for ${req.params.queueName}:`, error);
     res.status(500).json({ success: false, error: 'Failed to fetch DLQ jobs' });
   }
 });
@@ -68,7 +69,7 @@ router.post('/:queueName/retry/:jobId', async (req, res) => {
     const job = await backgroundJobManager.queueService.retryJob(queueName, jobId);
     res.json({ success: true, message: `Job ${jobId} re-queued`, data: { jobId: job.id } });
   } catch (error) {
-    console.error(`Error retrying job ${req.params.jobId}:`, error);
+    logger.error(`Error retrying job ${req.params.jobId}:`, error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

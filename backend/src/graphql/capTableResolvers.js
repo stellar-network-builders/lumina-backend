@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const capTableService = require('../services/capTableService');
 const { Organization, Token } = require('../models');
 const { GraphQLScalarType } = require('graphql');
@@ -33,7 +34,7 @@ const capTableResolvers = {
       try {
         return await capTableService.generateCapTable(tokenAddress, options);
       } catch (error) {
-        console.error('Error generating cap table:', error);
+        logger.error('Error generating cap table:', error);
         throw new Error(`Failed to generate cap table: ${error.message}`);
       }
     },
@@ -45,7 +46,7 @@ const capTableResolvers = {
       try {
         return await capTableService.getOrganizationCapTable(organizationId, null, options);
       } catch (error) {
-        console.error('Error generating organization cap table:', error);
+        logger.error('Error generating organization cap table:', error);
         throw new Error(`Failed to generate organization cap table: ${error.message}`);
       }
     },
@@ -57,7 +58,7 @@ const capTableResolvers = {
       try {
         return await capTableService.getBeneficiaryPosition(beneficiaryAddress, tokenAddress);
       } catch (error) {
-        console.error('Error getting beneficiary position:', error);
+        logger.error('Error getting beneficiary position:', error);
         throw new Error(`Failed to get beneficiary position: ${error.message}`);
       }
     },
@@ -69,7 +70,7 @@ const capTableResolvers = {
       try {
         return await capTableService.getCapTableAnalytics(tokenAddress, period, organizationId);
       } catch (error) {
-        console.error('Error getting cap table analytics:', error);
+        logger.error('Error getting cap table analytics:', error);
         throw new Error(`Failed to get cap table analytics: ${error.message}`);
       }
     },
@@ -82,7 +83,7 @@ const capTableResolvers = {
         const options = { first, after };
         return await capTableService.searchBeneficiaries(tokenAddress, query, options);
       } catch (error) {
-        console.error('Error searching beneficiaries:', error);
+        logger.error('Error searching beneficiaries:', error);
         throw new Error(`Failed to search beneficiaries: ${error.message}`);
       }
     },
@@ -99,7 +100,7 @@ const capTableResolvers = {
           .sort((a, b) => parseFloat(b.totalVested) - parseFloat(a.totalVested))
           .slice(0, limit);
       } catch (error) {
-        console.error('Error getting top token holders:', error);
+        logger.error('Error getting top token holders:', error);
         throw new Error(`Failed to get top token holders: ${error.message}`);
       }
     },
@@ -111,7 +112,7 @@ const capTableResolvers = {
       try {
         return await capTableService.getConcentrationMetrics(tokenAddress, organizationId);
       } catch (error) {
-        console.error('Error getting concentration metrics:', error);
+        logger.error('Error getting concentration metrics:', error);
         throw new Error(`Failed to get concentration metrics: ${error.message}`);
       }
     }
@@ -126,10 +127,10 @@ const capTableResolvers = {
         // This would trigger recalculation of vested amounts
         // For now, we'll just return true as a placeholder
         // In a real implementation, this would update cached calculations
-        console.log(`Refreshing cap table for token: ${tokenAddress}`);
+        logger.info(`Refreshing cap table for token: ${tokenAddress}`);
         return true;
       } catch (error) {
-        console.error('Error refreshing cap table:', error);
+        logger.error('Error refreshing cap table:', error);
         throw new Error(`Failed to refresh cap table: ${error.message}`);
       }
     },
@@ -143,7 +144,7 @@ const capTableResolvers = {
         const exportUrl = await capTableService.exportCapTable(capTable, format);
         return exportUrl;
       } catch (error) {
-        console.error('Error exporting cap table:', error);
+        logger.error('Error exporting cap table:', error);
         throw new Error(`Failed to export cap table: ${error.message}`);
       }
     },
@@ -157,7 +158,7 @@ const capTableResolvers = {
         const reportUrl = await capTableService.generateReport(capTable, reportType);
         return reportUrl;
       } catch (error) {
-        console.error('Error generating cap table report:', error);
+        logger.error('Error generating cap table report:', error);
         throw new Error(`Failed to generate cap table report: ${error.message}`);
       }
     }

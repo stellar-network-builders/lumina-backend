@@ -5,6 +5,7 @@
  * for customer due diligence and verification status monitoring.
  */
 
+const logger = require('../utils/logger');
 const axios = require('axios');
 const { KycStatus, KycNotification } = require('../models');
 const Sentry = require('@sentry/node');
@@ -23,7 +24,7 @@ class SEP12KycService {
    */
   async getKycStatus(userAddress) {
     try {
-      console.log(`🔍 Fetching KYC status for user: ${userAddress}`);
+      logger.info(`🔍 Fetching KYC status for user: ${userAddress}`);
       
       const response = await this.makeRequest('GET', `/customer/${userAddress}`);
       
@@ -32,7 +33,7 @@ class SEP12KycService {
       // Update or create KYC status record
       const kycStatus = await this.updateKycStatusFromSEP12(userAddress, kycData);
       
-      console.log(`✅ KYC status retrieved for user ${userAddress}: ${kycData.status}`);
+      logger.info(`✅ KYC status retrieved for user ${userAddress}: ${kycData.status}`);
       
       return {
         success: true,
@@ -41,7 +42,7 @@ class SEP12KycService {
       };
       
     } catch (error) {
-      console.error(`❌ Error fetching KYC status for user ${userAddress}:`, error);
+      logger.error(`❌ Error fetching KYC status for user ${userAddress}:`, error);
       
       if (error.response?.status === 404) {
         // User not found in SEP-12, create pending record
@@ -75,7 +76,7 @@ class SEP12KycService {
    */
   async submitKycInformation(userAddress, kycData) {
     try {
-      console.log(`📤 Submitting KYC information for user: ${userAddress}`);
+      logger.info(`📤 Submitting KYC information for user: ${userAddress}`);
       
       const payload = {
         account: userAddress,
@@ -98,7 +99,7 @@ class SEP12KycService {
         actionRequired: false
       });
       
-      console.log(`✅ KYC information submitted for user ${userAddress}`);
+      logger.info(`✅ KYC information submitted for user ${userAddress}`);
       
       return {
         success: true,
@@ -107,7 +108,7 @@ class SEP12KycService {
       };
       
     } catch (error) {
-      console.error(`❌ Error submitting KYC information for user ${userAddress}:`, error);
+      logger.error(`❌ Error submitting KYC information for user ${userAddress}:`, error);
       Sentry.captureException(error, {
         tags: { operation: 'submitKycInformation' },
         extra: { userAddress }
@@ -124,14 +125,14 @@ class SEP12KycService {
    */
   async updateKycInformation(userAddress, kycData) {
     try {
-      console.log(`🔄 Updating KYC information for user: ${userAddress}`);
+      logger.info(`🔄 Updating KYC information for user: ${userAddress}`);
       
       const response = await this.makeRequest('PUT', `/customer/${userAddress}`, kycData);
       
       // Update local KYC status
       const kycStatus = await this.updateKycStatusFromSEP12(userAddress, response.data);
       
-      console.log(`✅ KYC information updated for user ${userAddress}`);
+      logger.info(`✅ KYC information updated for user ${userAddress}`);
       
       return {
         success: true,
@@ -140,7 +141,7 @@ class SEP12KycService {
       };
       
     } catch (error) {
-      console.error(`❌ Error updating KYC information for user ${userAddress}:`, error);
+      logger.error(`❌ Error updating KYC information for user ${userAddress}:`, error);
       Sentry.captureException(error, {
         tags: { operation: 'updateKycInformation' },
         extra: { userAddress }
@@ -156,7 +157,7 @@ class SEP12KycService {
    */
   async deleteKycInformation(userAddress) {
     try {
-      console.log(`🗑️ Deleting KYC information for user: ${userAddress}`);
+      logger.info(`🗑️ Deleting KYC information for user: ${userAddress}`);
       
       await this.makeRequest('DELETE', `/customer/${userAddress}`);
       
@@ -172,7 +173,7 @@ class SEP12KycService {
         });
       }
       
-      console.log(`✅ KYC information deleted for user ${userAddress}`);
+      logger.info(`✅ KYC information deleted for user ${userAddress}`);
       
       return {
         success: true,
@@ -180,7 +181,7 @@ class SEP12KycService {
       };
       
     } catch (error) {
-      console.error(`❌ Error deleting KYC information for user ${userAddress}:`, error);
+      logger.error(`❌ Error deleting KYC information for user ${userAddress}:`, error);
       Sentry.captureException(error, {
         tags: { operation: 'deleteKycInformation' },
         extra: { userAddress }
@@ -196,11 +197,11 @@ class SEP12KycService {
    */
   async getKycHistory(userAddress) {
     try {
-      console.log(`📜 Fetching KYC history for user: ${userAddress}`);
+      logger.info(`📜 Fetching KYC history for user: ${userAddress}`);
       
       const response = await this.makeRequest('GET', `/customer/${userAddress}/history`);
       
-      console.log(`✅ KYC history retrieved for user ${userAddress}`);
+      logger.info(`✅ KYC history retrieved for user ${userAddress}`);
       
       return {
         success: true,
@@ -208,7 +209,7 @@ class SEP12KycService {
       };
       
     } catch (error) {
-      console.error(`❌ Error fetching KYC history for user ${userAddress}:`, error);
+      logger.error(`❌ Error fetching KYC history for user ${userAddress}:`, error);
       Sentry.captureException(error, {
         tags: { operation: 'getKycHistory' },
         extra: { userAddress }
@@ -224,7 +225,7 @@ class SEP12KycService {
    */
   async getBatchKycStatus(userAddresses) {
     try {
-      console.log(`📊 Fetching batch KYC status for ${userAddresses.length} users`);
+      logger.info(`📊 Fetching batch KYC status for ${userAddresses.length} users`);
       
       const results = {};
       
@@ -240,7 +241,7 @@ class SEP12KycService {
         }
       }
       
-      console.log(`✅ Batch KYC status completed for ${userAddresses.length} users`);
+      logger.info(`✅ Batch KYC status completed for ${userAddresses.length} users`);
       
       return {
         success: true,
@@ -248,7 +249,7 @@ class SEP12KycService {
       };
       
     } catch (error) {
-      console.error(`❌ Error in batch KYC status fetch:`, error);
+      logger.error(`❌ Error in batch KYC status fetch:`, error);
       Sentry.captureException(error, {
         tags: { operation: 'getBatchKycStatus' }
       });
@@ -462,7 +463,7 @@ class SEP12KycService {
    */
   async syncAllKycStatus() {
     try {
-      console.log('🔄 Starting KYC status sync for all users...');
+      logger.info('🔄 Starting KYC status sync for all users...');
       
       const allKycStatuses = await KycStatus.findAll({
         where: { is_active: true },
@@ -476,7 +477,7 @@ class SEP12KycService {
       const successful = Object.values(results.data).filter(r => r.success).length;
       const failed = Object.values(results.data).filter(r => !r.success).length;
       
-      console.log(`✅ KYC sync completed: ${successful} successful, ${failed} failed`);
+      logger.info(`✅ KYC sync completed: ${successful} successful, ${failed} failed`);
       
       return {
         total: userAddresses.length,
@@ -486,7 +487,7 @@ class SEP12KycService {
       };
       
     } catch (error) {
-      console.error(`❌ Error in KYC sync:`, error);
+      logger.error(`❌ Error in KYC sync:`, error);
       Sentry.captureException(error, {
         tags: { operation: 'syncAllKycStatus' }
       });

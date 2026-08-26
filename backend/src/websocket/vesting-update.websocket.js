@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const WebSocket = require('ws');
 const { EventEmitter } = require('events');
 const { sequelize } = require('../database/connection');
@@ -27,7 +28,7 @@ class VestingUpdateWebSocket {
 
   initialize() {
     this.wss.on('connection', (ws) => {
-      console.log('Client connected to vesting updates WebSocket');
+      logger.info('Client connected to vesting updates WebSocket');
       
       ws.isAlive = true;
       ws.subscriptions = new Set(); // Track which user addresses this client is subscribed to
@@ -41,18 +42,18 @@ class VestingUpdateWebSocket {
           const data = JSON.parse(message);
           this.handleMessage(ws, data);
         } catch (error) {
-          console.error('Error processing WebSocket message:', error);
+          logger.error('Error processing WebSocket message:', error);
           ws.send(JSON.stringify({ type: 'error', message: 'Invalid message format' }));
         }
       });
 
       ws.on('close', () => {
-        console.log('Client disconnected from vesting updates WebSocket');
+        logger.info('Client disconnected from vesting updates WebSocket');
         this.cleanupClient(ws);
       });
 
       ws.on('error', (error) => {
-        console.error('WebSocket error:', error);
+        logger.error('WebSocket error:', error);
       });
     });
 
@@ -113,7 +114,7 @@ class VestingUpdateWebSocket {
     this.clients.get(userAddress).add(ws);
     ws.subscriptions.add(userAddress);
 
-    console.log(`Client subscribed to ${userAddress}`);
+    logger.info(`Client subscribed to ${userAddress}`);
 
     // Send initial vesting state
     try {
@@ -123,7 +124,7 @@ class VestingUpdateWebSocket {
         data: vestingState 
       }));
     } catch (error) {
-      console.error('Error sending initial vesting state:', error);
+      logger.error('Error sending initial vesting state:', error);
       ws.send(JSON.stringify({ type: 'ERROR', message: error.message }));
     }
   }
@@ -142,7 +143,7 @@ class VestingUpdateWebSocket {
       ws.subscriptions.delete(userAddress);
     }
 
-    console.log(`Client unsubscribed from ${userAddress}`);
+    logger.info(`Client unsubscribed from ${userAddress}`);
   }
 
   async handleGetVestingState(ws, payload) {
@@ -160,7 +161,7 @@ class VestingUpdateWebSocket {
         data: vestingState 
       }));
     } catch (error) {
-      console.error('Error getting vesting state:', error);
+      logger.error('Error getting vesting state:', error);
       ws.send(JSON.stringify({ type: 'ERROR', message: error.message }));
     }
   }
@@ -194,7 +195,7 @@ class VestingUpdateWebSocket {
 
       console.debug(`Broadcasted vesting updates to ${userAddresses.length} users`);
     } catch (error) {
-      console.error('Error broadcasting vesting updates:', error);
+      logger.error('Error broadcasting vesting updates:', error);
     }
   }
 
@@ -263,7 +264,7 @@ class VestingUpdateWebSocket {
         vaults
       };
     } catch (error) {
-      console.error('Error calculating vesting state:', error);
+      logger.error('Error calculating vesting state:', error);
       throw error;
     }
   }

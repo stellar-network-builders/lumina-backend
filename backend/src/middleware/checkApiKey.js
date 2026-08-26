@@ -1,5 +1,6 @@
 const db = require('../database'); // Adjust the path as necessary
 const crypto = require('crypto');
+const logger = require('../utils/logger');
 
 const checkApiKey = async (req, res, next) => {
     try {
@@ -24,7 +25,7 @@ const checkApiKey = async (req, res, next) => {
 
     next();
     } catch (error) {
-        console.error('Error checking API key:', error);
+        logger.error('Error checking API key:', error);
         return res.status(500).json({ message: 'Internal server error' });
     }
 };

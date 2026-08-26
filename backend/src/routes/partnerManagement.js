@@ -3,6 +3,7 @@ const router = express.Router();
 const authService = require('../services/authService');
 const partnerManagementService = require('../services/partnerManagementService');
 const PartnerManagement = require('../models/partnerManagement');
+const logger = require('../utils/logger');
 const PartnerUsageTracking = require('../models/partnerUsageTracking');
 
 /**
@@ -94,7 +95,7 @@ router.post('/register', authService.authenticate(true), async (req, res) => {
       data: partner
     });
   } catch (error) {
-    console.error('Error registering partner:', error);
+    logger.error('Error registering partner:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -135,7 +136,7 @@ router.get('/list', authService.authenticate(true), async (req, res) => {
       data: partners
     });
   } catch (error) {
-    console.error('Error getting partners:', error);
+    logger.error('Error getting partners:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -206,7 +207,7 @@ router.get('/report/:partnerId', authService.authenticate(true), async (req, res
       data: report
     });
   } catch (error) {
-    console.error('Error generating report:', error);
+    logger.error('Error generating report:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -265,7 +266,7 @@ router.post('/suspend/:partnerId', authService.authenticate(true), async (req, r
       message: 'Partner suspended successfully'
     });
   } catch (error) {
-    console.error('Error suspending partner:', error);
+    logger.error('Error suspending partner:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -303,7 +304,7 @@ router.post('/reactivate/:partnerId', authService.authenticate(true), async (req
       message: 'Partner reactivated successfully'
     });
   } catch (error) {
-    console.error('Error reactivating partner:', error);
+    logger.error('Error reactivating partner:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -361,7 +362,7 @@ router.put('/tier/:partnerId', authService.authenticate(true), async (req, res) 
       message: `Partner tier updated to ${tier}`
     });
   } catch (error) {
-    console.error('Error updating tier:', error);
+    logger.error('Error updating tier:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -413,7 +414,7 @@ router.post('/regenerate-key/:partnerId', authService.authenticate(true), async 
       data: credentials
     });
   } catch (error) {
-    console.error('Error regenerating API key:', error);
+    logger.error('Error regenerating API key:', error);
     res.status(500).json({
       success: false,
       error: error.message

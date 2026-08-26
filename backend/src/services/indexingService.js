@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { ClaimsHistory, Vault, SubSchedule } = require('../models');
 const metricsService = require('./metricsService');
 const priceService = require('./priceService');
@@ -52,7 +53,7 @@ class IndexingService {
             where: { transaction_hash, event_index }
           });
           if (existing) {
-            console.log(`Duplicate claim event detected: ${transaction_hash}:${event_index}, returning existing record`);
+            logger.info(`Duplicate claim event detected: ${transaction_hash}:${event_index}, returning existing record`);
             return existing;
           }
         }
@@ -65,13 +66,13 @@ class IndexingService {
       }
 
 
-      console.log(`Processed claim ${transaction_hash} with price $${price_at_claim_usd}`);
+      logger.info(`Processed claim ${transaction_hash} with price $${price_at_claim_usd}`);
 
       // Check for large claim and send Slack alert
       try {
         await slackWebhookService.processClaimAlert(claim.toJSON());
       } catch (alertError) {
-        console.error('Error processing claim alert:', alertError);
+        logger.error('Error processing claim alert:', alertError);
         // Don't throw - alert failure shouldn't fail the claim processing
       }
 
@@ -79,7 +80,7 @@ class IndexingService {
       try {
         await tvlService.handleClaim(claim.toJSON());
       } catch (tvlError) {
-        console.error('Error updating TVL for claim:', tvlError);
+        logger.error('Error updating TVL for claim:', tvlError);
         // Don't throw - TVL update failure shouldn't fail claim processing
       }
 
@@ -91,15 +92,15 @@ class IndexingService {
       // Invalidate user portfolio cache after claim processing
       try {
         await cacheService.invalidateUserPortfolio(user_address);
-        console.log(`Invalidated portfolio cache for user ${user_address}`);
+        logger.info(`Invalidated portfolio cache for user ${user_address}`);
       } catch (cacheError) {
-        console.error('Error invalidating portfolio cache:', cacheError);
+        logger.error('Error invalidating portfolio cache:', cacheError);
         // Don't throw - cache invalidation failure shouldn't fail claim processing
       }
 
       return claim;
     } catch (error) {
-      console.error('Error processing claim:', error);
+      logger.error('Error processing claim:', error);
       Sentry.captureException(error, {
         tags: { operation: 'processClaim' },
         extra: { claimData }
@@ -192,7 +193,7 @@ class IndexingService {
             throw error;
           }
           // For other errors (like balance query failures), log and rethrow
-          console.error('Error verifying balance for dynamic token:', error);
+          logger.error('Error verifying balance for dynamic token:', error);
           throw error;
         }
       }
@@ -210,7 +211,7 @@ class IndexingService {
         amount_withdrawn: String(newAmountWithdrawn)
       });
 
-      console.log(`Executed claim for subschedule ${subScheduleId}: ${claimableNum} tokens`);
+      logger.info(`Executed claim for subschedule ${subScheduleId}: ${claimableNum} tokens`);
 
       return {
         amount: claimableNum,
@@ -221,7 +222,7 @@ class IndexingService {
       };
     } catch (error) {
       // Log error with context
-      console.error('Error executing claim:', error);
+      logger.error('Error executing claim:', error);
       
       Sentry.captureException(error, {
         tags: { operation: 'executeClaimForSubSchedule' },
@@ -286,7 +287,7 @@ class IndexingService {
         results.totalFailed++;
 
         // Log the error but continue processing other claims
-        console.error(`Failed to execute claim for subschedule ${request.subScheduleId}:`, error.message);
+        logger.error(`Failed to execute claim for subschedule ${request.subScheduleId}:`, error.message);
       }
     }
 
@@ -329,7 +330,7 @@ class IndexingService {
    */
   async optimizedHistoricalSync(historicalData, options = {}) {
     try {
-      console.log('Starting optimized historical sync with bulk inserts...');
+      logger.info('Starting optimized historical sync with bulk inserts...');
       
       // Use the bulk insert service for optimal performance
       const results = await bulkInsertService.optimizedHistoricalSync(historicalData, options);
@@ -339,7 +340,7 @@ class IndexingService {
         try {
           await this.sendHistoricalSyncAlert(results);
         } catch (alertError) {
-          console.error('Error sending historical sync alert:', alertError);
+          logger.error('Error sending historical sync alert:', alertError);
           // Don't throw - alert failure shouldn't fail the sync
         }
       }
@@ -347,7 +348,7 @@ class IndexingService {
       return results;
       
     } catch (error) {
-      console.error('Error in optimized historical sync:', error);
+      logger.error('Error in optimized historical sync:', error);
       Sentry.captureException(error, {
         tags: { service: 'indexing', operation: 'optimizedHistoricalSync' },
         extra: { 
@@ -388,7 +389,7 @@ Genesis sync performance has been optimized with bulk inserts.`;
       });
 
     } catch (error) {
-      console.error('Failed to send historical sync alert:', error);
+      logger.error('Failed to send historical sync alert:', error);
     }
   }
 
@@ -403,7 +404,7 @@ Genesis sync performance has been optimized with bulk inserts.`;
       limit: 100 // Process in batches to avoid rate limits
     });
 
-    console.log(`Found ${claimsWithoutPrice.length} claims without price data`);
+    logger.info(`Found ${claimsWithoutPrice.length} claims without price data`);
 
     for (const claim of claimsWithoutPrice) {
       try {
@@ -413,15 +414,15 @@ Genesis sync performance has been optimized with bulk inserts.`;
         );
 
         await claim.update({ price_at_claim_usd: price });
-        console.log(`Backfilled price for claim ${claim.transaction_hash}: $${price}`);
+        logger.info(`Backfilled price for claim ${claim.transaction_hash}: $${price}`);
       } catch (error) {
-        console.error(`Failed to backfill price for claim ${claim.transaction_hash}:`, error.message);
+        logger.error(`Failed to backfill price for claim ${claim.transaction_hash}:`, error.message);
       }
     }
 
     return claimsWithoutPrice.length;
   } catch (error) {
-    console.error('Error in backfillMissingPrices:', error);
+    logger.error('Error in backfillMissingPrices:', error);
     Sentry.captureException(error, {
       tags: { operation: 'backfillMissingPrices' }
     });
@@ -473,7 +474,7 @@ Genesis sync performance has been optimized with bulk inserts.`;
       }
     };
   } catch (error) {
-    console.error('Error calculating realized gains:', error);
+    logger.error('Error calculating realized gains:', error);
     Sentry.captureException(error, {
       tags: { operation: 'getRealizedGains' },
       extra: { userAddress, startDate, endDate }
@@ -532,12 +533,12 @@ Genesis sync performance has been optimized with bulk inserts.`;
           String(parseFloat(balanceBefore) - parseFloat(top_up_amount))
         );
         
-        console.log(`Dynamic token deposit: Expected ${top_up_amount}, Actual received ${actualReceivedAmount}`);
+        logger.info(`Dynamic token deposit: Expected ${top_up_amount}, Actual received ${actualReceivedAmount}`);
       } catch (balanceError) {
-        console.error('Error verifying dynamic token deposit:', balanceError);
+        logger.error('Error verifying dynamic token deposit:', balanceError);
         // Log the error but continue with the expected amount
         // In production, you might want to handle this differently
-        console.warn(`Using expected amount ${top_up_amount} due to balance verification failure`);
+        logger.warn(`Using expected amount ${top_up_amount} due to balance verification failure`);
       }
     }
     // For static tokens, use the transfer amount as-is (current behavior)
@@ -577,7 +578,7 @@ Genesis sync performance has been optimized with bulk inserts.`;
           where: { transaction_hash, event_index }
         });
         if (existing) {
-          console.log(`Duplicate top-up event detected: ${transaction_hash}:${event_index}, returning existing record`);
+          logger.info(`Duplicate top-up event detected: ${transaction_hash}:${event_index}, returning existing record`);
           return existing;
         }
       }
@@ -594,10 +595,10 @@ Genesis sync performance has been optimized with bulk inserts.`;
       total_amount: parseFloat(vault.total_amount) + parseFloat(actualReceivedAmount),
     });
 
-    console.log(`Processed top-up ${transaction_hash} for vault ${vault_address}, amount: ${actualReceivedAmount}`);
+    logger.info(`Processed top-up ${transaction_hash} for vault ${vault_address}, amount: ${actualReceivedAmount}`);
     return subSchedule;
   } catch (error) {
-    console.error('Error processing top-up event:', error);
+    logger.error('Error processing top-up event:', error);
     Sentry.captureException(error, {
       tags: { operation: 'processTopUpEvent' },
       extra: { topUpData }
@@ -652,10 +653,10 @@ Genesis sync performance has been optimized with bulk inserts.`;
       throw new Error(`Insufficient releasable amount. Remaining: ${remainingToRelease}`);
     }
 
-    console.log(`Processed release ${transaction_hash} for vault ${vault_address}, amount: ${amount_released}`);
+    logger.info(`Processed release ${transaction_hash} for vault ${vault_address}, amount: ${amount_released}`);
     return { success: true, amount_released };
   } catch (error) {
-    console.error('Error processing release event:', error);
+    logger.error('Error processing release event:', error);
     Sentry.captureException(error, {
       tags: { operation: 'processReleaseEvent' },
       extra: { releaseData }

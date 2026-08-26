@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { RefreshToken } = require('../models');
@@ -104,7 +105,7 @@ class AuthService {
         tokenType: 'Bearer'
       };
     } catch (error) {
-      console.error('Error creating tokens:', error);
+      logger.error('Error creating tokens:', error);
       throw new Error('Failed to create tokens');
     }
   }
@@ -162,7 +163,7 @@ class AuthService {
       // Create new tokens
       return await this.createTokens(decoded.address);
     } catch (error) {
-      console.error('Error refreshing tokens:', error);
+      logger.error('Error refreshing tokens:', error);
       if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
         throw new Error('Invalid or expired refresh token');
       }
@@ -189,7 +190,7 @@ class AuthService {
 
       return result[0]; // Number of updated rows
     } catch (error) {
-      console.error('Error revoking tokens:', error);
+      logger.error('Error revoking tokens:', error);
       throw new Error('Failed to revoke tokens');
     }
   }
@@ -210,7 +211,7 @@ class AuthService {
 
       return result;
     } catch (error) {
-      console.error('Error cleaning up expired tokens:', error);
+      logger.error('Error cleaning up expired tokens:', error);
       return 0;
     }
   }
@@ -253,7 +254,7 @@ class AuthService {
 
       return org ? 'admin' : 'user';
     } catch (error) {
-      console.error('Error getting user role:', error);
+      logger.error('Error getting user role:', error);
       return 'user'; // Default to user role on error
     }
   }

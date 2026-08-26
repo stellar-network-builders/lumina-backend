@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const auditorService = require("../services/auditorService");
+const logger = require("../utils/logger");
 const authService = require("../services/authService");
 const {
   authenticateAuditor,
@@ -36,7 +37,7 @@ router.post("/tokens", authService.authenticate(true), async (req, res) => {
 
     res.status(201).json({ success: true, data: result });
   } catch (error) {
-    console.error("Error issuing auditor token:", error);
+    logger.error("Error issuing auditor token:", error);
     const status = error.message.includes("not found")
       ? 404
       : error.message.includes("Only organization")
@@ -65,7 +66,7 @@ router.get(
       );
       res.json({ success: true, data: tokens });
     } catch (error) {
-      console.error("Error listing auditor tokens:", error);
+      logger.error("Error listing auditor tokens:", error);
       const status = error.message.includes("not found")
         ? 404
         : error.message.includes("Only organization")
@@ -91,7 +92,7 @@ router.delete(
       );
       res.json({ success: true, data: result });
     } catch (error) {
-      console.error("Error revoking auditor token:", error);
+      logger.error("Error revoking auditor token:", error);
       const status = error.message.includes("not found")
         ? 404
         : error.message.includes("Only the organization")
@@ -115,7 +116,7 @@ router.get("/report/summary", authenticateAuditor, async (req, res) => {
     const summary = await auditorService.getAuditSummary(req.auditor.org_id);
     res.json({ success: true, data: summary });
   } catch (error) {
-    console.error("Error fetching audit summary:", error);
+    logger.error("Error fetching audit summary:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -138,7 +139,7 @@ router.get(
       );
       res.json({ success: true, data });
     } catch (error) {
-      console.error("Error fetching vesting schedules for audit:", error);
+      logger.error("Error fetching vesting schedules for audit:", error);
       res.status(500).json({ success: false, error: error.message });
     }
   },
@@ -162,7 +163,7 @@ router.get(
       );
       res.json({ success: true, data });
     } catch (error) {
-      console.error("Error fetching withdrawal history for audit:", error);
+      logger.error("Error fetching withdrawal history for audit:", error);
       res.status(500).json({ success: false, error: error.message });
     }
   },
@@ -186,7 +187,7 @@ router.get(
       });
       res.json({ success: true, data });
     } catch (error) {
-      console.error("Error fetching contract hashes for audit:", error);
+      logger.error("Error fetching contract hashes for audit:", error);
       res.status(500).json({ success: false, error: error.message });
     }
   },

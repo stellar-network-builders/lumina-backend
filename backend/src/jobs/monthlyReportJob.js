@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const cron = require('node-cron');
 const nodemailer = require('nodemailer');
 const reportService = require('../services/reportService');
@@ -8,13 +9,13 @@ class MonthlyReportJob {
   }
 
   start() {
-    console.log('Initializing Monthly Report Job...');
+    logger.info('Initializing Monthly Report Job...');
     cron.schedule(this.cronSchedule, async () => {
-      console.log('Running Monthly Report Job...');
+      logger.info('Running Monthly Report Job...');
       try {
         await this.generateAndSendReport();
       } catch (error) {
-        console.error('Error running Monthly Report Job:', error);
+        logger.error('Error running Monthly Report Job:', error);
       }
     });
   }
@@ -49,7 +50,7 @@ class MonthlyReportJob {
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`Monthly report sent to ${process.env.DAO_ADMIN_EMAIL}`);
+    logger.info(`Monthly report sent to ${process.env.DAO_ADMIN_EMAIL}`);
   }
 }
 

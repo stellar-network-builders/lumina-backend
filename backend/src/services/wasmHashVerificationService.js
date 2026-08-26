@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const crypto = require('crypto');
 const { CertifiedBuild, ContractUpgradeProposal } = require('../models');
 const Sentry = require('@sentry/node');
@@ -120,7 +121,7 @@ class WasmHashVerificationService {
 
     } catch (error) {
       Sentry.captureException(error);
-      console.error('WASM hash verification failed:', error);
+      logger.error('WASM hash verification failed:', error);
       
       return {
         valid: false,
@@ -257,7 +258,7 @@ class WasmHashVerificationService {
       // In a real implementation, this would query the blockchain
       return vault?.metadata?.version || '1.0.0';
     } catch (error) {
-      console.error('Error getting vault version:', error);
+      logger.error('Error getting vault version:', error);
       return '1.0.0'; // Default fallback
     }
   }
@@ -327,7 +328,7 @@ class WasmHashVerificationService {
         }))
       };
     } catch (error) {
-      console.error('Error getting vault immutable terms:', error);
+      logger.error('Error getting vault immutable terms:', error);
       return null;
     }
   }

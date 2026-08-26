@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const Joi = require('joi');
 
 const envSchema = Joi.object({
@@ -61,9 +62,9 @@ function validateEnv(loadedEnv = process.env) {
     if (missing.length) messages.push(`Missing required: ${missing.join(', ')}`);
     if (invalid.length) messages.push(`Invalid values: ${invalid.join('; ')}`);
 
-    console.error('\nEnvironment validation failed:\n');
-    messages.forEach((m) => console.error(`  - ${m}`));
-    console.error('\nPlease check your .env file and ensure all required variables are set.\n');
+    logger.error('\nEnvironment validation failed:\n');
+    messages.forEach((m) => logger.error(`  - ${m}`));
+    logger.error('\nPlease check your .env file and ensure all required variables are set.\n');
 
     throw new Error(`Environment validation failed: ${messages.join('. ')}`);
   }
@@ -74,13 +75,13 @@ function validateEnv(loadedEnv = process.env) {
 function validateEnvOrExit(loadedEnv = process.env) {
   try {
     const validated = validateEnv(loadedEnv);
-    console.log('Environment variables validated successfully');
+    logger.info('Environment variables validated successfully');
     return validated;
   } catch (err) {
     if (process.env.NODE_ENV === 'test') {
       throw err;
     }
-    console.error(err.message);
+    logger.error(err.message);
     process.exit(1);
   }
 }

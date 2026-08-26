@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { KycStatus, KycNotification } = require('../models');
 const { Op } = require('sequelize');
 
@@ -11,7 +12,7 @@ class GDPRComplianceService {
    * @returns {Promise<Object>} Deletion statistics
    */
   async runGDPRComplianceCheck() {
-    console.log('🔍 Starting GDPR compliance check...');
+    logger.info('🔍 Starting GDPR compliance check...');
 
     const results = {
       deletedUsers: 0,
@@ -32,9 +33,9 @@ class GDPRComplianceService {
         try {
           await this.scrubUserPII(user);
           results.deletedUsers++;
-          console.log(`✅ Scrubbed PII for deletion-requested user: ${user.user_address}`);
+          logger.info(`✅ Scrubbed PII for deletion-requested user: ${user.user_address}`);
         } catch (error) {
-          console.error(`❌ Failed to scrub user ${user.user_address}:`, error);
+          logger.error(`❌ Failed to scrub user ${user.user_address}:`, error);
           results.errors.push({
             userAddress: user.user_address,
             error: error.message
@@ -61,9 +62,9 @@ class GDPRComplianceService {
         try {
           await this.scrubUserPII(user);
           results.scrubbedRecords++;
-          console.log(`✅ Scrubbed PII for expired retention user: ${user.user_address}`);
+          logger.info(`✅ Scrubbed PII for expired retention user: ${user.user_address}`);
         } catch (error) {
-          console.error(`❌ Failed to scrub user ${user.user_address}:`, error);
+          logger.error(`❌ Failed to scrub user ${user.user_address}:`, error);
           results.errors.push({
             userAddress: user.user_address,
             error: error.message
@@ -71,7 +72,7 @@ class GDPRComplianceService {
         }
       }
 
-      console.log(`🎉 GDPR compliance check completed. Deleted: ${results.deletedUsers}, Scrubbed: ${results.scrubbedRecords}, Errors: ${results.errors.length}`);
+      logger.info(`🎉 GDPR compliance check completed. Deleted: ${results.deletedUsers}, Scrubbed: ${results.scrubbedRecords}, Errors: ${results.errors.length}`);
 
       // Send notification if there were errors
       if (results.errors.length > 0) {
@@ -81,7 +82,7 @@ class GDPRComplianceService {
       return results;
 
     } catch (error) {
-      console.error('❌ GDPR compliance check failed:', error);
+      logger.error('❌ GDPR compliance check failed:', error);
       throw error;
     }
   }
@@ -131,7 +132,7 @@ class GDPRComplianceService {
     );
 
     // Log the scrubbing action for audit purposes
-    console.log(`🔒 GDPR PII scrubbing completed for user ${user.user_address} at ${new Date().toISOString()}`);
+    logger.info(`🔒 GDPR PII scrubbing completed for user ${user.user_address} at ${new Date().toISOString()}`);
   }
 
   /**
@@ -157,7 +158,7 @@ ${results.errors.length > 0 ? `Errors encountered: ${results.errors.map(e => `${
         'warning'
       );
     } catch (error) {
-      console.error('Failed to send GDPR compliance notification:', error);
+      logger.error('Failed to send GDPR compliance notification:', error);
     }
   }
 

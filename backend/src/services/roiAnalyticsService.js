@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { sequelize } = require('../database/connection');
 const { Vault, Beneficiary, GrantStream } = require('../models');
 const HistoricalTokenPrice = require('../models/historicalTokenPrice');
@@ -86,7 +87,7 @@ class RoiAnalyticsService {
 
       return analyticsData;
     } catch (error) {
-      console.error(`Error calculating ROI analytics for user ${userAddress}:`, error);
+      logger.error(`Error calculating ROI analytics for user ${userAddress}:`, error);
       throw error;
     }
   }
@@ -114,7 +115,7 @@ class RoiAnalyticsService {
 
       return await this.calculateSingleVaultRoi(vault);
     } catch (error) {
-      console.error(`Error calculating vault ROI for ${vaultAddress}:`, error);
+      logger.error(`Error calculating vault ROI for ${vaultAddress}:`, error);
       throw error;
     }
   }
@@ -136,7 +137,7 @@ class RoiAnalyticsService {
 
       return await this.calculateSingleGrantStreamRoi(grantStream);
     } catch (error) {
-      console.error(`Error calculating grant stream ROI for ${grantStreamAddress}:`, error);
+      logger.error(`Error calculating grant stream ROI for ${grantStreamAddress}:`, error);
       throw error;
     }
   }
@@ -153,7 +154,7 @@ class RoiAnalyticsService {
         const vaultRoi = await this.calculateSingleVaultRoi(vault, currentTime);
         vaultRoiData.push(vaultRoi);
       } catch (error) {
-        console.error(`Error calculating ROI for vault ${vault.address}:`, error);
+        logger.error(`Error calculating ROI for vault ${vault.address}:`, error);
         // Continue with other vaults
       }
     }
@@ -221,7 +222,7 @@ class RoiAnalyticsService {
         const grantRoi = await this.calculateSingleGrantStreamRoi(grantStream, currentTime);
         grantRoiData.push(grantRoi);
       } catch (error) {
-        console.error(`Error calculating ROI for grant stream ${grantStream.address}:`, error);
+        logger.error(`Error calculating ROI for grant stream ${grantStream.address}:`, error);
         // Continue with other grant streams
       }
     }
@@ -293,12 +294,12 @@ class RoiAnalyticsService {
       const price = await priceService.getTokenPrice(tokenAddress, grantDate.getTime());
       return parseFloat(price);
     } catch (error) {
-      console.error(`Error fetching grant price for ${tokenAddress} at ${grantDate}:`, error);
+      logger.error(`Error fetching grant price for ${tokenAddress} at ${grantDate}:`, error);
       
       // Fallback: use current price as approximation
       try {
         const currentPrice = await this.getCurrentMarketPrice(tokenAddress);
-        console.warn(`Using current price as fallback for grant price of ${tokenAddress}`);
+        logger.warn(`Using current price as fallback for grant price of ${tokenAddress}`);
         return currentPrice;
       } catch (fallbackError) {
         throw new Error(`Unable to determine grant price for ${tokenAddress}: ${error.message}`);
@@ -316,7 +317,7 @@ class RoiAnalyticsService {
       const dexPriceData = await stellarDexPriceService.getTokenVWAP(tokenAddress);
       return parseFloat(dexPriceData.price_usd);
     } catch (error) {
-      console.error(`Error fetching DEX price for ${tokenAddress}:`, error);
+      logger.error(`Error fetching DEX price for ${tokenAddress}:`, error);
       
       // Fallback to standard price service
       try {
@@ -500,7 +501,7 @@ class RoiAnalyticsService {
         const analytics = await this.getUserRoiAnalytics(userAddress);
         results.push(analytics);
       } catch (error) {
-        console.error(`Error getting batch ROI analytics for ${userAddress}:`, error);
+        logger.error(`Error getting batch ROI analytics for ${userAddress}:`, error);
         results.push({
           user_address: userAddress,
           error: error.message,
@@ -551,7 +552,7 @@ class RoiAnalyticsService {
             price_updated: new Date()
           });
         } catch (error) {
-          console.error(`Error getting market data for token ${tokenAddress}:`, error);
+          logger.error(`Error getting market data for token ${tokenAddress}:`, error);
         }
       }
 
@@ -561,7 +562,7 @@ class RoiAnalyticsService {
         tokens: tokenData
       };
     } catch (error) {
-      console.error('Error getting market overview:', error);
+      logger.error('Error getting market overview:', error);
       throw error;
     }
   }

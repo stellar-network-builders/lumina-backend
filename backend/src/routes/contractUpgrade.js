@@ -3,6 +3,7 @@ const router = express.Router();
 const contractUpgradeService = require('../services/contractUpgradeService');
 const contractUpgradeMultiSigService = require('../services/contractUpgradeMultiSigService');
 const wasmHashVerificationService = require('../services/wasmHashVerificationService');
+const logger = require('../utils/logger');
 const { ContractUpgradeProposal, CertifiedBuild } = require('../models');
 const Sentry = require('@sentry/node');
 
@@ -50,7 +51,7 @@ router.post('/proposals', requireAdminAuth, async (req, res) => {
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error creating upgrade proposal:', error);
+    logger.error('Error creating upgrade proposal:', error);
     res.status(400).json({
       success: false,
       error: error.message
@@ -83,7 +84,7 @@ router.post('/proposals/multisig', requireAdminAuth, async (req, res) => {
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error creating multi-sig upgrade proposal:', error);
+    logger.error('Error creating multi-sig upgrade proposal:', error);
     res.status(400).json({
       success: false,
       error: error.message
@@ -108,7 +109,7 @@ router.get('/proposals/:proposalId', async (req, res) => {
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error getting proposal details:', error);
+    logger.error('Error getting proposal details:', error);
     res.status(404).json({
       success: false,
       error: error.message
@@ -152,7 +153,7 @@ router.get('/vaults/:vaultAddress/proposals', async (req, res) => {
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error getting vault proposals:', error);
+    logger.error('Error getting vault proposals:', error);
     res.status(400).json({
       success: false,
       error: error.message
@@ -189,7 +190,7 @@ router.post('/proposals/:proposalId/approve', async (req, res) => {
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error approving proposal:', error);
+    logger.error('Error approving proposal:', error);
     res.status(400).json({
       success: false,
       error: error.message
@@ -226,7 +227,7 @@ router.post('/proposals/:proposalId/multisig-approve', async (req, res) => {
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error submitting multi-sig approval:', error);
+    logger.error('Error submitting multi-sig approval:', error);
     res.status(400).json({
       success: false,
       error: error.message
@@ -254,7 +255,7 @@ router.post('/proposals/:proposalId/execute', requireAdminAuth, async (req, res)
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error executing upgrade:', error);
+    logger.error('Error executing upgrade:', error);
     res.status(400).json({
       success: false,
       error: error.message
@@ -279,7 +280,7 @@ router.get('/proposals/:proposalId/voting-status', async (req, res) => {
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error getting voting status:', error);
+    logger.error('Error getting voting status:', error);
     res.status(404).json({
       success: false,
       error: error.message
@@ -313,7 +314,7 @@ router.post('/multisig-config', requireAdminAuth, async (req, res) => {
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error creating multi-sig config:', error);
+    logger.error('Error creating multi-sig config:', error);
     res.status(400).json({
       success: false,
       error: error.message
@@ -338,7 +339,7 @@ router.get('/multisig-config/:vaultAddress', async (req, res) => {
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error getting multi-sig config:', error);
+    logger.error('Error getting multi-sig config:', error);
     res.status(404).json({
       success: false,
       error: error.message
@@ -368,7 +369,7 @@ router.put('/multisig-config/:vaultAddress', requireAdminAuth, async (req, res) 
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error updating multi-sig config:', error);
+    logger.error('Error updating multi-sig config:', error);
     res.status(400).json({
       success: false,
       error: error.message
@@ -401,7 +402,7 @@ router.post('/verify-wasm-hash', async (req, res) => {
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error verifying WASM hash:', error);
+    logger.error('Error verifying WASM hash:', error);
     res.status(400).json({
       success: false,
       error: error.message
@@ -429,7 +430,7 @@ router.post('/certified-builds', requireAdminAuth, async (req, res) => {
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error registering certified build:', error);
+    logger.error('Error registering certified build:', error);
     res.status(400).json({
       success: false,
       error: error.message
@@ -478,7 +479,7 @@ router.get('/certified-builds', async (req, res) => {
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error getting certified builds:', error);
+    logger.error('Error getting certified builds:', error);
     res.status(400).json({
       success: false,
       error: error.message
@@ -512,7 +513,7 @@ router.get('/certified-builds/:wasmHash', async (req, res) => {
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error getting certified build:', error);
+    logger.error('Error getting certified build:', error);
     res.status(400).json({
       success: false,
       error: error.message
@@ -567,7 +568,7 @@ router.get('/audit-logs/:proposalId', async (req, res) => {
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error getting audit logs:', error);
+    logger.error('Error getting audit logs:', error);
     res.status(400).json({
       success: false,
       error: error.message
@@ -620,7 +621,7 @@ router.get('/stats', async (req, res) => {
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error getting upgrade stats:', error);
+    logger.error('Error getting upgrade stats:', error);
     res.status(400).json({
       success: false,
       error: error.message

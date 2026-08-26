@@ -1,5 +1,6 @@
 'use strict';
 
+const logger = require('../utils/logger');
 const { KycStatus } = require('../models');
 const { sequelize } = require('../database/connection');
 const { Op } = require('sequelize');
@@ -21,12 +22,12 @@ class KycStatusExpirationWorker {
    */
   async start() {
     if (this.isRunning) {
-      console.log('KYC expiration worker is already running');
+      logger.info('KYC expiration worker is already running');
       return;
     }
 
     try {
-      console.log('🔍 Starting KYC Status Expiration Worker...');
+      logger.info('🔍 Starting KYC Status Expiration Worker...');
       this.isRunning = true;
 
       // Run initial check
@@ -35,9 +36,9 @@ class KycStatusExpirationWorker {
       // Start periodic monitoring
       this.startPeriodicCheck();
 
-      console.log('✅ KYC expiration worker started successfully');
+      logger.info('✅ KYC expiration worker started successfully');
     } catch (error) {
-      console.error('Failed to start KYC expiration worker:', error);
+      logger.error('Failed to start KYC expiration worker:', error);
       this.isRunning = false;
       throw error;
     }
@@ -48,7 +49,7 @@ class KycStatusExpirationWorker {
    */
   async stop() {
     this.isRunning = false;
-    console.log('🛑 KYC expiration worker stopped');
+    logger.info('🛑 KYC expiration worker stopped');
 
     if (this.intervalId) {
       clearInterval(this.intervalId);
@@ -66,7 +67,7 @@ class KycStatusExpirationWorker {
       try {
         await this.checkExpiringStatuses();
       } catch (error) {
-        console.error('Error in periodic KYC expiration check:', error);
+        logger.error('Error in periodic KYC expiration check:', error);
         await auditLogger.log({
           action: 'kyc_expiration_worker_error',
           error: error.message,
@@ -81,14 +82,14 @@ class KycStatusExpirationWorker {
    */
   async checkExpiringStatuses() {
     try {
-      console.log('🔍 Checking for expiring KYC statuses...');
+      logger.info('🔍 Checking for expiring KYC statuses...');
 
       // Find KYC statuses expiring within threshold periods
       const criticalExpiring = await this.findExpiringStatuses(this.criticalThresholdDays);
       const soonExpiring = await this.findExpiringStatuses(this.expirationThresholdDays);
       const expired = await this.findExpiredStatuses();
 
-      console.log(`📊 KYC Status Summary:
+      logger.info(`📊 KYC Status Summary:
         - Critical (≤${this.criticalThresholdDays} days): ${criticalExpiring.length}
         - Expiring Soon (≤${this.expirationThresholdDays} days): ${soonExpiring.length}
         - Expired: ${expired.length}`);
@@ -112,7 +113,7 @@ class KycStatusExpirationWorker {
       await this.sendDailySummary();
 
     } catch (error) {
-      console.error('Error checking expiring KYC statuses:', error);
+      logger.error('Error checking expiring KYC statuses:', error);
       await auditLogger.log({
         action: 'kyc_expiration_check_error',
         error: error.message,
@@ -188,7 +189,7 @@ class KycStatusExpirationWorker {
    * @param {Array} criticalExpiring - Array of critical expiring KYC statuses
    */
   async processCriticalExpirations(criticalExpiring) {
-    console.log(`🚨 Processing ${criticalExpiring.length} critical KYC expirations...`);
+    logger.info(`🚨 Processing ${criticalExpiring.length} critical KYC expirations...`);
 
     for (const kycStatus of criticalExpiring) {
       try {
@@ -217,11 +218,11 @@ class KycStatusExpirationWorker {
         });
 
       } catch (error) {
-        console.error(`Error processing critical KYC expiration for ${kycStatus.user_address}:`, error);
+        logger.error(`Error processing critical KYC expiration for ${kycStatus.user_address}:`, error);
       }
     }
 
-    console.log(`✅ Processed ${criticalExpiring.length} critical KYC expirations`);
+    logger.info(`✅ Processed ${criticalExpiring.length} critical KYC expirations`);
   }
 
   /**
@@ -229,7 +230,7 @@ class KycStatusExpirationWorker {
    * @param {Array} soonExpiring - Array of soon expiring KYC statuses
    */
   async processSoonExpirations(soonExpiring) {
-    console.log(`⚠️ Processing ${soonExpiring.length} soon expiring KYC statuses...`);
+    logger.info(`⚠️ Processing ${soonExpiring.length} soon expiring KYC statuses...`);
 
     for (const kycStatus of soonExpiring) {
       try {
@@ -255,11 +256,11 @@ class KycStatusExpirationWorker {
         });
 
       } catch (error) {
-        console.error(`Error processing soon KYC expiration for ${kycStatus.user_address}:`, error);
+        logger.error(`Error processing soon KYC expiration for ${kycStatus.user_address}:`, error);
       }
     }
 
-    console.log(`✅ Processed ${soonExpiring.length} soon expiring KYC statuses`);
+    logger.info(`✅ Processed ${soonExpiring.length} soon expiring KYC statuses`);
   }
 
   /**
@@ -267,7 +268,7 @@ class KycStatusExpirationWorker {
    * @param {Array} expired - Array of expired KYC statuses
    */
   async processExpiredStatuses(expired) {
-    console.log(`❌ Processing ${expired.length} expired KYC statuses...`);
+    logger.info(`❌ Processing ${expired.length} expired KYC statuses...`);
 
     for (const kycStatus of expired) {
       try {
@@ -301,11 +302,11 @@ class KycStatusExpirationWorker {
         await this.updateRiskScore(kycStatus.id, 1.0); // Maximum risk for expired
 
       } catch (error) {
-        console.error(`Error processing expired KYC for ${kycStatus.user_address}:`, error);
+        logger.error(`Error processing expired KYC for ${kycStatus.user_address}:`, error);
       }
     }
 
-    console.log(`✅ Processed ${expired.length} expired KYC statuses`);
+    logger.info(`✅ Processed ${expired.length} expired KYC statuses`);
   }
 
   /**
@@ -325,10 +326,10 @@ class KycStatusExpirationWorker {
         priority: 'high'
       });
 
-      console.log(`📧 Sent immediate alert to ${kycStatus.user_address}: ${subject}`);
+      logger.info(`📧 Sent immediate alert to ${kycStatus.user_address}: ${subject}`);
 
     } catch (error) {
-      console.error(`Error sending immediate alert for ${kycStatus.user_address}:`, error);
+      logger.error(`Error sending immediate alert for ${kycStatus.user_address}:`, error);
     }
   }
 
@@ -348,10 +349,10 @@ class KycStatusExpirationWorker {
         priority: 'medium'
       });
 
-      console.log(`📧 Sent warning alert to ${kycStatus.user_address}: ${subject}`);
+      logger.info(`📧 Sent warning alert to ${kycStatus.user_address}: ${subject}`);
 
     } catch (error) {
-      console.error(`Error sending warning alert for ${kycStatus.user_address}:`, error);
+      logger.error(`Error sending warning alert for ${kycStatus.user_address}:`, error);
     }
   }
 
@@ -371,10 +372,10 @@ class KycStatusExpirationWorker {
         priority: 'high'
       });
 
-      console.log(`📧 Sent expired alert to ${kycStatus.user_address}: ${subject}`);
+      logger.info(`📧 Sent expired alert to ${kycStatus.user_address}: ${subject}`);
 
     } catch (error) {
-      console.error(`Error sending expired alert for ${kycStatus.user_address}:`, error);
+      logger.error(`Error sending expired alert for ${kycStatus.user_address}:`, error);
     }
   }
 
@@ -505,7 +506,7 @@ class KycStatusExpirationWorker {
 
       return userRecord ? userRecord.email : null;
     } catch (error) {
-      console.error(`Error getting user email for ${userAddress}:`, error);
+      logger.error(`Error getting user email for ${userAddress}:`, error);
       return null;
     }
   }
@@ -527,9 +528,9 @@ class KycStatusExpirationWorker {
         sent_at: new Date()
       });
 
-      console.log(`🚨 Created high-priority notification for ${kycStatus.user_address}`);
+      logger.info(`🚨 Created high-priority notification for ${kycStatus.user_address}`);
     } catch (error) {
-      console.error(`Error creating notification for ${kycStatus.user_address}:`, error);
+      logger.error(`Error creating notification for ${kycStatus.user_address}:`, error);
     }
   }
 
@@ -550,9 +551,9 @@ class KycStatusExpirationWorker {
         sent_at: new Date()
       });
 
-      console.log(`📝 Created notification for ${kycStatus.user_address}: ${notificationData.type}`);
+      logger.info(`📝 Created notification for ${kycStatus.user_address}: ${notificationData.type}`);
     } catch (error) {
-      console.error(`Error creating notification for ${kycStatus.user_address}:`, error);
+      logger.error(`Error creating notification for ${kycStatus.user_address}:`, error);
     }
   }
 
@@ -568,9 +569,9 @@ class KycStatusExpirationWorker {
         { where: { id: kycStatusId } }
       );
 
-      console.log(`📊 Updated risk score for KYC status ${kycStatusId} to ${riskScore}`);
+      logger.info(`📊 Updated risk score for KYC status ${kycStatusId} to ${riskScore}`);
     } catch (error) {
-      console.error(`Error updating risk score for KYC status ${kycStatusId}:`, error);
+      logger.error(`Error updating risk score for KYC status ${kycStatusId}:`, error);
     }
   }
 
@@ -593,9 +594,9 @@ class KycStatusExpirationWorker {
         priority: 'low'
       });
 
-      console.log('📧 Daily KYC status report sent');
+      logger.info('📧 Daily KYC status report sent');
     } catch (error) {
-      console.error('Error sending daily summary:', error);
+      logger.error('Error sending daily summary:', error);
     }
   }
 

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const ledgerSyncService = require('../services/ledgerSyncService');
 const Sentry = require('@sentry/node');
 
@@ -17,7 +18,7 @@ const vaultPauseMiddleware = (req, res, next) => {
 
     // Check if vault is paused
     if (ledgerSyncService.isVaultPaused(vaultAddress)) {
-      console.warn(`🔒 API access denied for paused vault: ${vaultAddress}`);
+      logger.warn(`🔒 API access denied for paused vault: ${vaultAddress}`);
       
       // Log the attempt for security monitoring
       Sentry.addBreadcrumb({
@@ -46,7 +47,7 @@ const vaultPauseMiddleware = (req, res, next) => {
     next();
 
   } catch (error) {
-    console.error('❌ Error in vault pause middleware:', error);
+    logger.error('❌ Error in vault pause middleware:', error);
     Sentry.captureException(error, {
       tags: { middleware: 'vault-pause' },
       extra: { path: req.path, method: req.method }
@@ -128,7 +129,7 @@ const vaultStatusMiddleware = async (req, res, next) => {
     
     next();
   } catch (error) {
-    console.error('❌ Error in vault status middleware:', error);
+    logger.error('❌ Error in vault status middleware:', error);
     next();
   }
 };
@@ -149,7 +150,7 @@ const pausedVaultsInfoMiddleware = async (req, res, next) => {
     
     next();
   } catch (error) {
-    console.error('❌ Error in paused vaults info middleware:', error);
+    logger.error('❌ Error in paused vaults info middleware:', error);
     req.pausedVaultsInfo = { pausedVaults: [], count: 0, serviceStatus: null };
     next();
   }
@@ -192,7 +193,7 @@ const vaultOperationMiddleware = (operation) => {
 
         const config = operationMessages[operation] || operationMessages['write'];
         
-        console.warn(`🔒 ${operation} operation denied for paused vault: ${vaultAddress}`);
+        logger.warn(`🔒 ${operation} operation denied for paused vault: ${vaultAddress}`);
         
         return res.status(503).json({
           success: false,
@@ -207,7 +208,7 @@ const vaultOperationMiddleware = (operation) => {
 
       next();
     } catch (error) {
-      console.error(`❌ Error in vault operation middleware (${operation}):`, error);
+      logger.error(`❌ Error in vault operation middleware (${operation}):`, error);
       next();
     }
   };
@@ -231,7 +232,7 @@ const getPausedVaultsEndpoint = (req, res) => {
       }
     });
   } catch (error) {
-    console.error('❌ Error getting paused vaults:', error);
+    logger.error('❌ Error getting paused vaults:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -265,7 +266,7 @@ const unpauseVaultEndpoint = async (req, res) => {
     // Unpause the vault
     await ledgerSyncService.unpauseVault(vaultAddress, reason || 'Manual unpause by admin');
     
-    console.log(`✅ Vault ${vaultAddress} manually unpaused by admin`);
+    logger.info(`✅ Vault ${vaultAddress} manually unpaused by admin`);
     
     res.json({
       success: true,
@@ -275,7 +276,7 @@ const unpauseVaultEndpoint = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ Error unpausing vault:', error);
+    logger.error('❌ Error unpausing vault:', error);
     res.status(500).json({
       success: false,
       error: error.message

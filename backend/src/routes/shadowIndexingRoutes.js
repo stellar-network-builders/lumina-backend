@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const shadowIndexingService = require('../services/shadowIndexingService');
 const Sentry = require('@sentry/node');
+const logger = require('../utils/logger');
 
 // Middleware for error handling
 const asyncHandler = (fn) => (req, res, next) => {
@@ -93,7 +94,7 @@ router.get('/status', asyncHandler(async (req, res) => {
       data: status
     });
   } catch (error) {
-    console.error('Error getting shadow-indexing status:', error);
+    logger.error('Error getting shadow-indexing status:', error);
     Sentry.captureException(error);
     res.status(500).json({
       success: false,
@@ -130,7 +131,7 @@ router.post('/start', asyncHandler(async (req, res) => {
       message: 'Shadow-indexing service started successfully'
     });
   } catch (error) {
-    console.error('Error starting shadow-indexing service:', error);
+    logger.error('Error starting shadow-indexing service:', error);
     Sentry.captureException(error);
     res.status(500).json({
       success: false,
@@ -167,7 +168,7 @@ router.post('/stop', asyncHandler(async (req, res) => {
       message: 'Shadow-indexing service stopped successfully'
     });
   } catch (error) {
-    console.error('Error stopping shadow-indexing service:', error);
+    logger.error('Error stopping shadow-indexing service:', error);
     Sentry.captureException(error);
     res.status(500).json({
       success: false,
@@ -204,7 +205,7 @@ router.post('/reset', asyncHandler(async (req, res) => {
       message: 'Shadow-indexing service reset successfully'
     });
   } catch (error) {
-    console.error('Error resetting shadow-indexing service:', error);
+    logger.error('Error resetting shadow-indexing service:', error);
     Sentry.captureException(error);
     res.status(500).json({
       success: false,
@@ -256,7 +257,7 @@ router.post('/consistency-check', asyncHandler(async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Error performing consistency check:', error);
+    logger.error('Error performing consistency check:', error);
     Sentry.captureException(error);
     res.status(500).json({
       success: false,
@@ -324,7 +325,7 @@ router.get('/ledgers', asyncHandler(async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error getting processed ledgers:', error);
+    logger.error('Error getting processed ledgers:', error);
     Sentry.captureException(error);
     res.status(500).json({
       success: false,
@@ -374,7 +375,7 @@ router.get('/config', asyncHandler(async (req, res) => {
       data: stats.config
     });
   } catch (error) {
-    console.error('Error getting shadow-indexing config:', error);
+    logger.error('Error getting shadow-indexing config:', error);
     Sentry.captureException(error);
     res.status(500).json({
       success: false,
@@ -456,7 +457,7 @@ router.get('/health', asyncHandler(async (req, res) => {
       data: healthData
     });
   } catch (error) {
-    console.error('Error getting shadow-indexing health:', error);
+    logger.error('Error getting shadow-indexing health:', error);
     Sentry.captureException(error);
     res.status(500).json({
       success: false,
@@ -467,7 +468,7 @@ router.get('/health', asyncHandler(async (req, res) => {
 
 // Error handling middleware
 router.use((error, req, res, next) => {
-  console.error('Shadow-indexing route error:', error);
+  logger.error('Shadow-indexing route error:', error);
   Sentry.captureException(error);
   
   res.status(500).json({

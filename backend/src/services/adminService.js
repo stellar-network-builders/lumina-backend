@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const auditLogger = require('./auditLogger');
 const vestingService = require('./vestingService');
 
@@ -20,7 +21,7 @@ class AdminService {
       }
 
       // Perform revoke action (placeholder for actual implementation)
-      console.log(`Revoking access to vault ${targetVault} by admin ${adminAddress}. Reason: ${reason}`);
+      logger.info(`Revoking access to vault ${targetVault} by admin ${adminAddress}. Reason: ${reason}`);
 
       // Log the action for audit
       auditLogger.logAction(adminAddress, 'REVOKE', targetVault);
@@ -34,7 +35,7 @@ class AdminService {
         timestamp: new Date().toISOString()
       };
     } catch (error) {
-      console.error('Error in revokeAccess:', error);
+      logger.error('Error in revokeAccess:', error);
       throw error;
     }
   }
@@ -63,7 +64,7 @@ class AdminService {
         tokenType // Pass tokenType to vestingService
       );
     } catch (error) {
-      console.error('Error in createVault:', error);
+      logger.error('Error in createVault:', error);
       throw error;
     }
   }
@@ -81,7 +82,7 @@ class AdminService {
       }
 
       // Perform transfer action (placeholder for actual implementation)
-      console.log(`Transferring vault ${targetVault} to ${newOwner} by admin ${adminAddress}`);
+      logger.info(`Transferring vault ${targetVault} to ${newOwner} by admin ${adminAddress}`);
 
       // Log the action for audit
       auditLogger.logAction(adminAddress, 'TRANSFER', targetVault);
@@ -96,7 +97,7 @@ class AdminService {
         timestamp: new Date().toISOString()
       };
     } catch (error) {
-      console.error('Error in transferVault:', error);
+      logger.error('Error in transferVault:', error);
       throw error;
     }
   }
@@ -119,7 +120,7 @@ class AdminService {
         vestingDuration
       );
     } catch (error) {
-      console.error('Error in topUpVault:', error);
+      logger.error('Error in topUpVault:', error);
       throw error;
     }
   }
@@ -128,7 +129,7 @@ class AdminService {
     try {
       return await vestingService.getVaultWithSubSchedules(vaultAddress);
     } catch (error) {
-      console.error('Error in getVaultDetails:', error);
+      logger.error('Error in getVaultDetails:', error);
       throw error;
     }
   }
@@ -137,7 +138,7 @@ class AdminService {
     try {
       return await vestingService.calculateReleasableAmount(vaultAddress, asOfDate);
     } catch (error) {
-      console.error('Error in calculateReleasableAmount:', error);
+      logger.error('Error in calculateReleasableAmount:', error);
       throw error;
     }
   }
@@ -146,7 +147,7 @@ class AdminService {
     try {
       return await vestingService.releaseTokens(adminAddress, vaultAddress, releaseAmount, userAddress);
     } catch (error) {
-      console.error('Error in releaseTokens:', error);
+      logger.error('Error in releaseTokens:', error);
       throw error;
     }
   }
@@ -189,7 +190,7 @@ class AdminService {
         transferId
       });
 
-      console.log(`Admin transfer proposed: ${currentAdminAddress} -> ${newAdminAddress} for contract ${contractAddress || 'global'}`);
+      logger.info(`Admin transfer proposed: ${currentAdminAddress} -> ${newAdminAddress} for contract ${contractAddress || 'global'}`);
 
       return {
         success: true,
@@ -202,7 +203,7 @@ class AdminService {
         expiresAt: pendingTransfer.expiresAt
       };
     } catch (error) {
-      console.error('Error in proposeNewAdmin:', error);
+      logger.error('Error in proposeNewAdmin:', error);
       throw error;
     }
   }
@@ -245,7 +246,7 @@ class AdminService {
         transferId
       });
 
-      console.log(`Admin transfer accepted: ${pendingTransfer.currentAdmin} -> ${newAdminAddress} for contract ${pendingTransfer.contractAddress || 'global'}`);
+      logger.info(`Admin transfer accepted: ${pendingTransfer.currentAdmin} -> ${newAdminAddress} for contract ${pendingTransfer.contractAddress || 'global'}`);
 
       return {
         success: true,
@@ -258,7 +259,7 @@ class AdminService {
         acceptedAt: pendingTransfer.acceptedAt
       };
     } catch (error) {
-      console.error('Error in acceptOwnership:', error);
+      logger.error('Error in acceptOwnership:', error);
       throw error;
     }
   }
@@ -289,7 +290,7 @@ class AdminService {
         transferId
       });
 
-      console.log(`Admin ownership transferred immediately: ${currentAdminAddress} -> ${newAdminAddress} for contract ${contractAddress || 'global'}`);
+      logger.info(`Admin ownership transferred immediately: ${currentAdminAddress} -> ${newAdminAddress} for contract ${contractAddress || 'global'}`);
 
       return {
         success: true,
@@ -302,7 +303,7 @@ class AdminService {
         method: 'immediate'
       };
     } catch (error) {
-      console.error('Error in transferOwnership:', error);
+      logger.error('Error in transferOwnership:', error);
       throw error;
     }
   }
@@ -321,7 +322,7 @@ class AdminService {
         total: filteredTransfers.length
       };
     } catch (error) {
-      console.error('Error getting pending transfers:', error);
+      logger.error('Error getting pending transfers:', error);
       throw error;
     }
   }
@@ -335,7 +336,7 @@ class AdminService {
         total: logs.length
       };
     } catch (error) {
-      console.error('Error getting audit logs:', error);
+      logger.error('Error getting audit logs:', error);
       throw error;
     }
   }

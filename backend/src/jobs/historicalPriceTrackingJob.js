@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const cron = require('node-cron');
 const historicalPriceTrackingService = require('../services/historicalPriceTrackingService');
 const { Vault, SubSchedule } = require('../models');
@@ -27,7 +28,7 @@ class HistoricalPriceTrackingJob {
    */
   start() {
     if (this.cronJob) {
-      console.log('Historical price tracking job is already running');
+      logger.info('Historical price tracking job is already running');
       return;
     }
 
@@ -39,7 +40,7 @@ class HistoricalPriceTrackingJob {
       timezone: 'UTC'
     });
 
-    console.log('📊 Historical Price Tracking Job scheduled to run daily at 2 AM UTC');
+    logger.info('📊 Historical Price Tracking Job scheduled to run daily at 2 AM UTC');
   }
 
   /**
@@ -49,7 +50,7 @@ class HistoricalPriceTrackingJob {
     if (this.cronJob) {
       this.cronJob.stop();
       this.cronJob = null;
-      console.log('Historical price tracking job stopped');
+      logger.info('Historical price tracking job stopped');
     }
   }
 
@@ -58,7 +59,7 @@ class HistoricalPriceTrackingJob {
    */
   async run() {
     if (this.isRunning) {
-      console.log('Historical price tracking job is already running, skipping...');
+      logger.info('Historical price tracking job is already running, skipping...');
       return;
     }
 
@@ -67,7 +68,7 @@ class HistoricalPriceTrackingJob {
     const startTime = Date.now();
 
     try {
-      console.log('🚀 Starting historical price tracking job...');
+      logger.info('🚀 Starting historical price tracking job...');
 
       // Step 1: Generate milestones for active vaults
       const milestonesGenerated = await this.generateMilestonesForActiveVaults();
@@ -88,12 +89,12 @@ class HistoricalPriceTrackingJob {
       this.lastRun = new Date();
       this.stats.successfulRuns++;
 
-      console.log(`✅ Historical price tracking job completed successfully in ${duration}ms`);
-      console.log(`📈 Generated ${milestonesGenerated} milestones, backfilled ${pricesBackfilled} prices, generated ${reportsGenerated} reports`);
+      logger.info(`✅ Historical price tracking job completed successfully in ${duration}ms`);
+      logger.info(`📈 Generated ${milestonesGenerated} milestones, backfilled ${pricesBackfilled} prices, generated ${reportsGenerated} reports`);
 
     } catch (error) {
       this.stats.failedRuns++;
-      console.error('❌ Historical price tracking job failed:', error);
+      logger.error('❌ Historical price tracking job failed:', error);
       
       // Send error to monitoring service if available
       if (global.Sentry) {
@@ -133,7 +134,7 @@ class HistoricalPriceTrackingJob {
         ]
       });
 
-      console.log(`📋 Found ${activeVaults.length} active vaults for milestone generation`);
+      logger.info(`📋 Found ${activeVaults.length} active vaults for milestone generation`);
 
       let totalMilestones = 0;
 
@@ -152,9 +153,9 @@ class HistoricalPriceTrackingJob {
               }
             );
             totalMilestones += milestones.length;
-            console.log(`📊 Generated ${milestones.length} milestones for vault ${vault.address}`);
+            logger.info(`📊 Generated ${milestones.length} milestones for vault ${vault.address}`);
           } catch (error) {
-            console.error(`Error generating milestones for vault ${vault.id}:`, error.message);
+            logger.error(`Error generating milestones for vault ${vault.id}:`, error.message);
           }
         }));
 
@@ -166,7 +167,7 @@ class HistoricalPriceTrackingJob {
 
       return totalMilestones;
     } catch (error) {
-      console.error('Error in generateMilestonesForActiveVaults:', error);
+      logger.error('Error in generateMilestonesForActiveVaults:', error);
       return 0;
     }
   }
@@ -177,7 +178,7 @@ class HistoricalPriceTrackingJob {
    */
   async backfillMissingPrices() {
     try {
-      console.log('🔄 Starting price backfill process...');
+      logger.info('🔄 Starting price backfill process...');
 
       // Backfill prices for the last 30 days
       const startDate = new Date();
@@ -188,10 +189,10 @@ class HistoricalPriceTrackingJob {
         batchSize: 100
       });
 
-      console.log(`💰 Backfilled prices for ${backfilledCount} milestones`);
+      logger.info(`💰 Backfilled prices for ${backfilledCount} milestones`);
       return backfilledCount;
     } catch (error) {
-      console.error('Error in backfillMissingPrices:', error);
+      logger.error('Error in backfillMissingPrices:', error);
       return 0;
     }
   }
@@ -230,7 +231,7 @@ class HistoricalPriceTrackingJob {
         raw: true
       });
 
-      console.log(`📋 Found ${userTokenCombos.length} user/token combinations for ${previousYear} reports`);
+      logger.info(`📋 Found ${userTokenCombos.length} user/token combinations for ${previousYear} reports`);
 
       let reportsGenerated = 0;
 
@@ -248,7 +249,7 @@ class HistoricalPriceTrackingJob {
             );
             reportsGenerated++;
           } catch (error) {
-            console.error(`Error generating report for ${combo['beneficiary.address']}/${combo.token_address}:`, error.message);
+            logger.error(`Error generating report for ${combo['beneficiary.address']}/${combo.token_address}:`, error.message);
           }
         }));
 
@@ -258,10 +259,10 @@ class HistoricalPriceTrackingJob {
         }
       }
 
-      console.log(`📊 Generated ${reportsGenerated} cost basis reports for ${previousYear}`);
+      logger.info(`📊 Generated ${reportsGenerated} cost basis reports for ${previousYear}`);
       return reportsGenerated;
     } catch (error) {
-      console.error('Error in generateCostBasisReports:', error);
+      logger.error('Error in generateCostBasisReports:', error);
       return 0;
     }
   }

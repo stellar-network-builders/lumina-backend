@@ -1,5 +1,6 @@
 'use strict';
 
+const logger = require('../utils/logger');
 const { ConversionEvent } = require('../models');
 const { sequelize } = require('../database/connection');
 const StellarSdk = require('stellar-sdk');
@@ -26,12 +27,12 @@ class RealTimeExchangeRateService extends EventEmitter {
    */
   async start() {
     if (this.isTracking) {
-      console.log('Exchange rate tracking is already running');
+      logger.info('Exchange rate tracking is already running');
       return;
     }
 
     try {
-      console.log('Starting real-time exchange rate tracking...');
+      logger.info('Starting real-time exchange rate tracking...');
       this.isTracking = true;
 
       // Start periodic price updates
@@ -44,7 +45,7 @@ class RealTimeExchangeRateService extends EventEmitter {
       await this.startWebSocketConnections();
 
     } catch (error) {
-      console.error('Failed to start exchange rate tracking:', error);
+      logger.error('Failed to start exchange rate tracking:', error);
       this.isTracking = false;
       throw error;
     }
@@ -55,7 +56,7 @@ class RealTimeExchangeRateService extends EventEmitter {
    */
   async stop() {
     this.isTracking = false;
-    console.log('Real-time exchange rate tracking stopped');
+    logger.info('Real-time exchange rate tracking stopped');
     
     // Clear intervals
     if (this.updateTimer) {
@@ -106,7 +107,7 @@ class RealTimeExchangeRateService extends EventEmitter {
       try {
         await this.updateAllRates();
       } catch (error) {
-        console.error('Error in periodic rate update:', error);
+        logger.error('Error in periodic rate update:', error);
       }
     }, this.updateInterval);
   }
@@ -120,7 +121,7 @@ class RealTimeExchangeRateService extends EventEmitter {
       try {
         await this.monitorDexPool(pair, pool);
       } catch (error) {
-        console.error(`Error monitoring DEX pool ${pair}:`, error);
+        logger.error(`Error monitoring DEX pool ${pair}:`, error);
       }
     }
   }
@@ -155,7 +156,7 @@ class RealTimeExchangeRateService extends EventEmitter {
         });
       }
     } catch (error) {
-      console.error(`Error monitoring pool ${pair}:`, error);
+      logger.error(`Error monitoring pool ${pair}:`, error);
     }
   }
 
@@ -183,7 +184,7 @@ class RealTimeExchangeRateService extends EventEmitter {
 
       return mockOrderbook;
     } catch (error) {
-      console.error('Error getting order book:', error);
+      logger.error('Error getting order book:', error);
       return null;
     }
   }
@@ -225,13 +226,13 @@ class RealTimeExchangeRateService extends EventEmitter {
       for (const pair of pairsToMonitor) {
         const ws = new StellarSdk.ws.Server(wsUrl, {
           open: () => {
-            console.log(`WebSocket connected for ${pair}`);
+            logger.info(`WebSocket connected for ${pair}`);
           },
           message: (message) => {
             this.handleWebSocketMessage(message, pair);
           },
           error: (error) => {
-            console.error(`WebSocket error for ${pair}:`, error);
+            logger.error(`WebSocket error for ${pair}:`, error);
           }
         });
 
@@ -242,7 +243,7 @@ class RealTimeExchangeRateService extends EventEmitter {
       }
 
     } catch (error) {
-      console.error('Error starting WebSocket connections:', error);
+      logger.error('Error starting WebSocket connections:', error);
     }
   }
 
@@ -262,10 +263,10 @@ class RealTimeExchangeRateService extends EventEmitter {
       };
 
       // This would use actual Stellar WebSocket subscription
-      console.log(`Subscribing to transactions for ${pair}`);
+      logger.info(`Subscribing to transactions for ${pair}`);
       
     } catch (error) {
-      console.error(`Error subscribing to ${pair}:`, error);
+      logger.error(`Error subscribing to ${pair}:`, error);
     }
   }
 
@@ -299,7 +300,7 @@ class RealTimeExchangeRateService extends EventEmitter {
         }
       }
     } catch (error) {
-      console.error('Error handling WebSocket message:', error);
+      logger.error('Error handling WebSocket message:', error);
     }
   }
 
@@ -338,7 +339,7 @@ class RealTimeExchangeRateService extends EventEmitter {
 
       return null;
     } catch (error) {
-      console.error('Error extracting rate from transaction:', error);
+      logger.error('Error extracting rate from transaction:', error);
       return null;
     }
   }
@@ -490,7 +491,7 @@ class RealTimeExchangeRateService extends EventEmitter {
 
       return null;
     } catch (error) {
-      console.error('Error getting current rate:', error);
+      logger.error('Error getting current rate:', error);
       return null;
     }
   }
@@ -569,7 +570,7 @@ class RealTimeExchangeRateService extends EventEmitter {
       }
 
     } catch (error) {
-      console.error('Error fetching fresh rates:', error);
+      logger.error('Error fetching fresh rates:', error);
     }
 
     return rates;
@@ -643,7 +644,7 @@ class RealTimeExchangeRateService extends EventEmitter {
 
       return statistics;
     } catch (error) {
-      console.error('Error getting rate statistics:', error);
+      logger.error('Error getting rate statistics:', error);
       return {
         pair,
         period: hours,

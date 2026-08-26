@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const models = require('../../models');
 
 const proofResolver = {
@@ -14,7 +15,7 @@ const proofResolver = {
         // For now, returning a placeholder
         return [];
       } catch (error) {
-        console.error('Error fetching audit logs:', error);
+        logger.error('Error fetching audit logs:', error);
         throw new Error(`Failed to fetch audit logs: ${error.message}`);
       }
     },
@@ -25,7 +26,7 @@ const proofResolver = {
         // For now, returning a placeholder
         return [];
       } catch (error) {
-        console.error('Error fetching pending transfers:', error);
+        logger.error('Error fetching pending transfers:', error);
         throw new Error(`Failed to fetch pending transfers: ${error.message}`);
       }
     }
@@ -52,7 +53,7 @@ const proofResolver = {
 
         return auditLog;
       } catch (error) {
-        console.error('Error revoking access:', error);
+        logger.error('Error revoking access:', error);
         throw new Error(`Failed to revoke access: ${error.message}`);
       }
     },
@@ -89,7 +90,7 @@ const proofResolver = {
 
         return auditLog;
       } catch (error) {
-        console.error('Error transferring vault:', error);
+        logger.error('Error transferring vault:', error);
         throw new Error(`Failed to transfer vault: ${error.message}`);
       }
     },
@@ -114,7 +115,7 @@ const proofResolver = {
 
         return transfer;
       } catch (error) {
-        console.error('Error proposing new admin:', error);
+        logger.error('Error proposing new admin:', error);
         throw new Error(`Failed to propose new admin: ${error.message}`);
       }
     },
@@ -138,7 +139,7 @@ const proofResolver = {
 
         return transfer;
       } catch (error) {
-        console.error('Error accepting ownership:', error);
+        logger.error('Error accepting ownership:', error);
         throw new Error(`Failed to accept ownership: ${error.message}`);
       }
     },
@@ -162,7 +163,7 @@ const proofResolver = {
 
         return transfer;
       } catch (error) {
-        console.error('Error transferring ownership:', error);
+        logger.error('Error transferring ownership:', error);
         throw new Error(`Failed to transfer ownership: ${error.message}`);
       }
     }

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const crypto = require("crypto");
 
 // Use a static key for encryption. In a real environment, this should be an environment variable.
@@ -57,7 +58,7 @@ function decryptEmail(text) {
 
     return decrypted.toString("utf8");
   } catch (error) {
-    console.error("Error decrypting email:", error.message);
+    logger.error("Error decrypting email:", error.message);
     // Return original text if decryption fails (might be unencrypted)
     return text;
   }

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const axios = require('axios');
 const cron = require('node-cron');
 const { Op } = require('sequelize');
@@ -29,18 +30,18 @@ class LiquidityMonitorService {
 
   start() {
     if (!this.isConfigured()) {
-      console.warn(
+      logger.warn(
         'Liquidity monitor is disabled. Set LIQUIDITY_MONITOR_QUOTE_ASSET to a Stellar asset like USDC:G...'
       );
       return;
     }
 
     this.cronJob = cron.schedule(this.cronSchedule, async () => {
-      console.log('Running liquidity monitor cron job...');
+      logger.info('Running liquidity monitor cron job...');
       await this.monitorAllVaults();
     });
 
-    console.log(`Liquidity monitor cron job started with schedule ${this.cronSchedule}.`);
+    logger.info(`Liquidity monitor cron job started with schedule ${this.cronSchedule}.`);
   }
 
   isConfigured() {
@@ -86,7 +87,7 @@ class LiquidityMonitorService {
         }
       } catch (error) {
         skipped += 1;
-        console.error(`Liquidity monitor failed for vault ${vault.address}:`, error.message);
+        logger.error(`Liquidity monitor failed for vault ${vault.address}:`, error.message);
         await this.markUnavailable(vault, error.message);
       }
     }

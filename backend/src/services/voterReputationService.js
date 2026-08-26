@@ -1,5 +1,6 @@
 'use strict';
 
+const logger = require('../utils/logger');
 const { DAOVote, DAOProposal } = require('../models');
 const { sequelize } = require('../database/connection');
 
@@ -43,7 +44,7 @@ class VoterReputationService {
       // This allows users to double their voting weight if they have 100% accuracy.
       return 1.0 + accuracy;
     } catch (error) {
-      console.error(`Error calculating governance score for ${walletAddress}:`, error);
+      logger.error(`Error calculating governance score for ${walletAddress}:`, error);
       return 1.0; // Fallback to base score
     }
   }

@@ -3,6 +3,7 @@ const router = express.Router();
 const authService = require('../services/authService');
 const contractVerificationService = require('../services/contractVerificationService');
 const ApprovedContractRegistry = require('../models/approvedContractRegistry');
+const logger = require('../utils/logger');
 
 /**
  * @swagger
@@ -95,7 +96,7 @@ router.post('/verify', authService.authenticate(), async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Error verifying contract:', error);
+    logger.error('Error verifying contract:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -179,7 +180,7 @@ router.post('/register', authService.authenticate(true), async (req, res) => {
       data: registry
     });
   } catch (error) {
-    console.error('Error registering contract:', error);
+    logger.error('Error registering contract:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -245,7 +246,7 @@ router.post('/blacklist', authService.authenticate(true), async (req, res) => {
       message: 'Contract has been blacklisted'
     });
   } catch (error) {
-    console.error('Error blacklisting contract:', error);
+    logger.error('Error blacklisting contract:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -300,7 +301,7 @@ router.get('/list', async (req, res) => {
       data: contracts
     });
   } catch (error) {
-    console.error('Error getting approved contracts:', error);
+    logger.error('Error getting approved contracts:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -346,7 +347,7 @@ router.get('/:contractAddress', async (req, res) => {
       data: contract
     });
   } catch (error) {
-    console.error('Error getting contract details:', error);
+    logger.error('Error getting contract details:', error);
     res.status(500).json({
       success: false,
       error: error.message

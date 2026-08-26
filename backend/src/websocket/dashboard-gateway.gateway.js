@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { Server } = require('socket.io');
 const { sequelize } = require('../database/connection');
 const Vault = require('../models/vault');
@@ -36,7 +37,7 @@ class DashboardGateway {
     this.io.on('connection', (socket) => {
       // By the time we get here the guard has authenticated the socket and set
       // socket.auth = { address, role } and socket.userAddress.
-      console.log(`Client connected: ${socket.id} (user ${socket.userAddress})`);
+      logger.info(`Client connected: ${socket.id} (user ${socket.userAddress})`);
 
       // Bind the verified identity immediately so the user receives their updates.
       this.userSockets.set(socket.id, socket.userAddress);
@@ -73,7 +74,7 @@ class DashboardGateway {
 
       // Handle errors
       socket.on('error', (error) => {
-        console.error(`Socket error for ${socket.id}:`, error);
+        logger.error(`Socket error for ${socket.id}:`, error);
       });
     });
 
@@ -85,7 +86,7 @@ class DashboardGateway {
     // Start periodic updates for live dashboard
     this.startPeriodicUpdates();
 
-    console.log('Dashboard WebSocket Gateway initialized successfully');
+    logger.info('Dashboard WebSocket Gateway initialized successfully');
   }
 
   async handleAuthentication(socket, data) {
@@ -102,9 +103,9 @@ class DashboardGateway {
 
       this.userSockets.set(socket.id, userAddress);
       socket.emit('authenticated', { success: true, userAddress, role: socket.auth && socket.auth.role });
-      console.log(`User ${userAddress} confirmed on socket ${socket.id}`);
+      logger.info(`User ${userAddress} confirmed on socket ${socket.id}`);
     } catch (error) {
-      console.error('Authentication error:', error);
+      logger.error('Authentication error:', error);
       socket.emit('error', { message: 'Authentication failed' });
     }
   }
@@ -128,7 +129,7 @@ class DashboardGateway {
     socket.join(`user:${userAddress}`);
 
     socket.emit('subscribed', { userAddress });
-    console.log(`Socket ${socket.id} subscribed to updates for ${userAddress}`);
+    logger.info(`Socket ${socket.id} subscribed to updates for ${userAddress}`);
   }
 
   handleUserUnsubscription(socket, data) {
@@ -157,7 +158,7 @@ class DashboardGateway {
       const vestingState = await this.calculateUserVestingState(userAddress);
       socket.emit('vesting_state', vestingState);
     } catch (error) {
-      console.error('Error getting vesting state:', error);
+      logger.error('Error getting vesting state:', error);
       socket.emit('error', { message: 'Failed to get vesting state' });
     }
   }
@@ -174,7 +175,7 @@ class DashboardGateway {
       const dashboardData = await this.calculateDashboardData(userAddress);
       socket.emit('dashboard_data', dashboardData);
     } catch (error) {
-      console.error('Error getting dashboard data:', error);
+      logger.error('Error getting dashboard data:', error);
       socket.emit('error', { message: 'Failed to get dashboard data' });
     }
   }
@@ -193,7 +194,7 @@ class DashboardGateway {
 
     // Free the per-IP / per-user connection slots and audit the disconnect.
     this.guard.release(socket);
-    console.log(`Client disconnected: ${socket.id}`);
+    logger.info(`Client disconnected: ${socket.id}`);
   }
 
   onClaimEvent(claimData) {
@@ -216,7 +217,7 @@ class DashboardGateway {
       const vestingState = await this.calculateUserVestingState(userAddress);
       this.io.to(`user:${userAddress}`).emit('vesting_state_updated', vestingState);
     } catch (error) {
-      console.error('Error emitting updated vesting state:', error);
+      logger.error('Error emitting updated vesting state:', error);
     }
   }
 
@@ -246,13 +247,13 @@ class DashboardGateway {
             ledgerCloseTime: new Date().toISOString()
           });
         } catch (error) {
-          console.error(`Error broadcasting update for ${userAddress}:`, error);
+          logger.error(`Error broadcasting update for ${userAddress}:`, error);
         }
       }
 
       console.debug(`Broadcasted live updates to ${userAddresses.length} users`);
     } catch (error) {
-      console.error('Error broadcasting live updates:', error);
+      logger.error('Error broadcasting live updates:', error);
     }
   }
 
@@ -330,7 +331,7 @@ class DashboardGateway {
         lastUpdated: new Date().toISOString()
       };
     } catch (error) {
-      console.error('Error calculating vesting state:', error);
+      logger.error('Error calculating vesting state:', error);
       throw error;
     }
   }
@@ -356,7 +357,7 @@ class DashboardGateway {
         }
       };
     } catch (error) {
-      console.error('Error calculating dashboard data:', error);
+      logger.error('Error calculating dashboard data:', error);
       throw error;
     }
   }

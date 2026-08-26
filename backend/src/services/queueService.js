@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { Queue, Worker } = require('bullmq');
 const IORedis = require('ioredis');
 
@@ -103,12 +104,12 @@ class QueueService {
     try {
       await this.connection.connect();
       this.isReady = true;
-      console.log(
+      logger.info(
         `QueueService connected to Redis at ${this.redisConfig.host}:${this.redisConfig.port}`
       );
     } catch (error) {
       this.isReady = false;
-      console.error('QueueService failed to connect to Redis:', error.message);
+      logger.error('QueueService failed to connect to Redis:', error.message);
       throw error;
     }
   }
@@ -165,15 +166,15 @@ class QueueService {
 
     // Surface lifecycle events for observability.
     worker.on('failed', (job, err) => {
-      console.error(
+      logger.error(
         `[queue:${name}] job ${job?.id} failed (attempt ${job?.attemptsMade}): ${err?.message}`
       );
     });
     worker.on('stalled', (jobId) => {
-      console.warn(`[queue:${name}] job ${jobId} stalled — will be retried`);
+      logger.warn(`[queue:${name}] job ${jobId} stalled — will be retried`);
     });
     worker.on('error', (err) => {
-      console.error(`[queue:${name}] worker error: ${err?.message}`);
+      logger.error(`[queue:${name}] worker error: ${err?.message}`);
     });
 
     this.workers.set(name, worker);

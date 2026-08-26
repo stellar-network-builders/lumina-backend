@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const axios = require('axios');
 const { StellarTomlResolver } = require('stellar-sdk');
 
@@ -78,7 +79,7 @@ class AnchorService {
       const quotePromises = anchors.map(anchor => 
         this.fetchAnchorQuote(anchor.domain, tokenSymbol, amount, fiatCurrency)
           .catch(error => {
-            console.error(`Failed to fetch quote from ${anchor.domain}:`, error.message);
+            logger.error(`Failed to fetch quote from ${anchor.domain}:`, error.message);
             return null;
           })
       );
@@ -103,7 +104,7 @@ class AnchorService {
       return bestQuote;
 
     } catch (error) {
-      console.error('Error getting off-ramp quote:', error);
+      logger.error('Error getting off-ramp quote:', error);
       throw error;
     }
   }
@@ -174,7 +175,7 @@ class AnchorService {
       };
 
     } catch (error) {
-      console.error(`Error fetching quote from ${anchorDomain}:`, error);
+      logger.error(`Error fetching quote from ${anchorDomain}:`, error);
       throw error;
     }
   }
@@ -244,11 +245,11 @@ class AnchorService {
       }
 
       // For other cases, use a default rate or throw error
-      console.warn(`No exchange rate available for ${assetCode} to ${fiatCurrency}, using 1:1`);
+      logger.warn(`No exchange rate available for ${assetCode} to ${fiatCurrency}, using 1:1`);
       return 1.0;
 
     } catch (error) {
-      console.error('Error getting exchange rate:', error);
+      logger.error('Error getting exchange rate:', error);
       // Fallback to 1:1
       return 1.0;
     }
@@ -281,7 +282,7 @@ class AnchorService {
         .sort((a, b) => parseFloat(b.netPayout) - parseFloat(a.netPayout));
 
     } catch (error) {
-      console.error('Error getting multiple quotes:', error);
+      logger.error('Error getting multiple quotes:', error);
       throw error;
     }
   }

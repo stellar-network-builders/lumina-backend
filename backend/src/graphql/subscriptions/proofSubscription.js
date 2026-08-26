@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { PubSub } = require('graphql-subscriptions');
 const { models } = require('../../models');
 
@@ -122,7 +123,7 @@ const publishVaultUpdate = async (vaultAddress, vaultData) => {
       throw new Error(`Vault not found: ${vaultAddress}`);
     }
   } catch (error) {
-    console.error('Error publishing vault update:', error);
+    logger.error('Error publishing vault update:', error);
   }
 };
 
@@ -170,7 +171,7 @@ const publishBeneficiaryUpdate = async (
       throw new Error(`Vault not found: ${vaultAddress}`);
     }
   } catch (error) {
-    console.error('Error publishing beneficiary update:', error);
+    logger.error('Error publishing beneficiary update:', error);
   }
 };
 
@@ -188,7 +189,7 @@ const publishNewClaim = async (userAddress, claimData) => {
       pubsub.publish(`${SUBSCRIPTION_EVENTS.NEW_CLAIM}_${userAddress}`, { newClaim: claim });
     }
   } catch (error) {
-    console.error('Error publishing new claim:', error);
+    logger.error('Error publishing new claim:', error);
   }
 };
 
@@ -211,7 +212,7 @@ const publishWithdrawalProcessed = async (
       withdrawalProcessed: withdrawableInfo 
     });
   } catch (error) {
-    console.error('Error publishing withdrawal processed:', error);
+    logger.error('Error publishing withdrawal processed:', error);
   }
 };
 
@@ -219,7 +220,7 @@ const publishAuditLogCreated = async (auditLog) => {
   try {
     pubsub.publish(SUBSCRIPTION_EVENTS.AUDIT_LOG_CREATED, { auditLogCreated: auditLog });
   } catch (error) {
-    console.error('Error publishing audit log created:', error);
+    logger.error('Error publishing audit log created:', error);
   }
 };
 
@@ -233,16 +234,16 @@ const publishAdminTransferUpdated = async (contractAddress, transferData) => {
       adminTransferUpdated: transferData 
     });
   } catch (error) {
-    console.error('Error publishing admin transfer updated:', error);
+    logger.error('Error publishing admin transfer updated:', error);
   }
 };
 
 const publishTVLUpdate = async (tvlStats) => {
   try {
     pubsub.publish(SUBSCRIPTION_EVENTS.TVL_UPDATED, { tvlUpdated: tvlStats });
-    console.log('TVL update published via WebSocket:', tvlStats);
+    logger.info('TVL update published via WebSocket:', tvlStats);
   } catch (error) {
-    console.error('Error publishing TVL update:', error);
+    logger.error('Error publishing TVL update:', error);
   }
 };
 

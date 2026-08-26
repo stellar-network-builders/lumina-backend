@@ -7,6 +7,7 @@
 
 const rule144ComplianceService = require('../services/rule144ComplianceService');
 const Sentry = require('@sentry/node');
+const logger = require('../utils/logger');
 
 /**
  * Middleware to check Rule 144 compliance before processing claims
@@ -36,7 +37,7 @@ const rule144ComplianceMiddleware = async (req, res, next) => {
 
     // If not compliant, block the claim
     if (!complianceCheck.isCompliant) {
-      console.warn(`RULE 144 COMPLIANCE BLOCK: Claim blocked for user ${user_address} from vault ${vault_id}`);
+      logger.warn(`RULE 144 COMPLIANCE BLOCK: Claim blocked for user ${user_address} from vault ${vault_id}`);
       
       // Log compliance violation attempt
       Sentry.captureMessage('Rule 144 compliance violation blocked', {
@@ -71,14 +72,14 @@ const rule144ComplianceMiddleware = async (req, res, next) => {
     }
 
     // If compliant, proceed with claim
-    console.log(`RULE 144 COMPLIANCE PASSED: User ${user_address} claim from vault ${vault_id} approved`);
+    logger.info(`RULE 144 COMPLIANCE PASSED: User ${user_address} claim from vault ${vault_id} approved`);
     
     // Attach compliance data to request for downstream use
     req.rule144Compliance = complianceCheck;
     
     next();
   } catch (error) {
-    console.error('Error in Rule 144 compliance middleware:', error);
+    logger.error('Error in Rule 144 compliance middleware:', error);
     
     // Log middleware error
     Sentry.captureException(error, {
@@ -124,11 +125,11 @@ const recordClaimComplianceMiddleware = async (req, res, next) => {
       amount_claimed
     );
 
-    console.log(`RULE 144 CLAIM RECORDED: User ${user_address} claimed ${amount_claimed} from vault ${vault_id}`);
+    logger.info(`RULE 144 CLAIM RECORDED: User ${user_address} claimed ${amount_claimed} from vault ${vault_id}`);
     
     next();
   } catch (error) {
-    console.error('Error recording claim compliance:', error);
+    logger.error('Error recording claim compliance:', error);
     
     // Log error but don't block the response since claim was already processed
     Sentry.captureException(error, {
@@ -174,11 +175,11 @@ const autoCreateComplianceMiddleware = async (req, res, next) => {
             isRestrictedSecurity: true // Default to restricted for US investors
           });
           
-          console.log(`Auto-created Rule 144 compliance record for beneficiary ${beneficiary_address} in vault ${vault_id}`);
+          logger.info(`Auto-created Rule 144 compliance record for beneficiary ${beneficiary_address} in vault ${vault_id}`);
         } catch (error) {
           // If record already exists, that's fine
           if (!error.message.includes('already exists')) {
-            console.error('Error auto-creating compliance record:', error);
+            logger.error('Error auto-creating compliance record:', error);
           }
         }
       }
@@ -186,7 +187,7 @@ const autoCreateComplianceMiddleware = async (req, res, next) => {
     
     next();
   } catch (error) {
-    console.error('Error in auto-create compliance middleware:', error);
+    logger.error('Error in auto-create compliance middleware:', error);
     next();
   }
 };

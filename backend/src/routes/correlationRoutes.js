@@ -3,6 +3,7 @@ const router = express.Router();
 const tvlPriceCorrelationService = require('../services/tvlPriceCorrelationService');
 const tvlService = require('../services/tvlService');
 const authService = require('../services/authService');
+const logger = require('../utils/logger');
 
 /**
  * Get TVL-Price correlation analysis
@@ -67,7 +68,7 @@ router.get('/analysis', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error in correlation analysis:', error);
+    logger.error('Error in correlation analysis:', error);
     res.status(500).json({
       error: 'Failed to perform correlation analysis',
       message: error.message
@@ -127,7 +128,7 @@ router.get('/chart', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error generating chart data:', error);
+    logger.error('Error generating chart data:', error);
     res.status(500).json({
       error: 'Failed to generate chart data',
       message: error.message
@@ -205,7 +206,7 @@ router.get('/insights', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error generating insights:', error);
+    logger.error('Error generating insights:', error);
     res.status(500).json({
       error: 'Failed to generate insights',
       message: error.message
@@ -278,7 +279,7 @@ router.get('/historical-tvl', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching historical TVL:', error);
+    logger.error('Error fetching historical TVL:', error);
     res.status(500).json({
       error: 'Failed to fetch historical TVL data',
       message: error.message
@@ -327,7 +328,7 @@ router.post('/create-snapshot',
         }
       });
     } catch (error) {
-      console.error('Error creating TVL snapshot:', error);
+      logger.error('Error creating TVL snapshot:', error);
       res.status(500).json({
         error: 'Failed to create TVL snapshot',
         message: error.message
@@ -354,7 +355,7 @@ router.delete('/cache',
         }
       });
     } catch (error) {
-      console.error('Error clearing cache:', error);
+      logger.error('Error clearing cache:', error);
       res.status(500).json({
         error: 'Failed to clear cache',
         message: error.message

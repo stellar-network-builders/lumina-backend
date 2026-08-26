@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { VaultRegistry, Vault, IndexerState } = require('../models');
 const { Op } = require('sequelize');
 const Sentry = require('@sentry/node');
@@ -18,7 +19,7 @@ class VaultRegistryService {
       const state = await IndexerState.findByPk(this.serviceName);
       return state ? state.last_ingested_ledger : 0;
     } catch (error) {
-      console.error('Error fetching last processed ledger:', error);
+      logger.error('Error fetching last processed ledger:', error);
       throw error;
     }
   }
@@ -43,7 +44,7 @@ class VaultRegistryService {
       
       return sequence;
     } catch (error) {
-      console.error('Error updating last processed ledger:', error);
+      logger.error('Error updating last processed ledger:', error);
       throw error;
     }
   }
@@ -70,7 +71,7 @@ class VaultRegistryService {
       });
 
       if (existingVault) {
-        console.log(`Vault ${contract_id} already registered, updating...`);
+        logger.info(`Vault ${contract_id} already registered, updating...`);
         await existingVault.update({
           project_name,
           metadata: { ...existingVault.metadata, ...metadata },
@@ -92,10 +93,10 @@ class VaultRegistryService {
         discovered_at: new Date()
       });
 
-      console.log(`Registered new vault: ${contract_id} (${project_name})`);
+      logger.info(`Registered new vault: ${contract_id} (${project_name})`);
       return registryEntry;
     } catch (error) {
-      console.error('Error registering vault:', error);
+      logger.error('Error registering vault:', error);
       Sentry.captureException(error, {
         tags: { operation: 'registerVault' },
         extra: { vaultData }
@@ -156,7 +157,7 @@ class VaultRegistryService {
         }
       };
     } catch (error) {
-      console.error('Error listing vaults by creator:', error);
+      logger.error('Error listing vaults by creator:', error);
       Sentry.captureException(error, {
         tags: { operation: 'listVaultsByCreator' },
         extra: { creatorAddress, options }
@@ -203,7 +204,7 @@ class VaultRegistryService {
         }
       };
     } catch (error) {
-      console.error('Error searching vaults by project name:', error);
+      logger.error('Error searching vaults by project name:', error);
       throw error;
     }
   }
@@ -245,7 +246,7 @@ class VaultRegistryService {
         }
       };
     } catch (error) {
-      console.error('Error getting all vaults:', error);
+      logger.error('Error getting all vaults:', error);
       throw error;
     }
   }
@@ -259,11 +260,11 @@ class VaultRegistryService {
       const latestLedger = await this.stellarServer.loadLedger();
 
       if (latestLedger.sequence <= lastProcessed) {
-        console.log('No new ledgers to process');
+        logger.info('No new ledgers to process');
         return { processed: 0, newVaults: [] };
       }
 
-      console.log(`Processing ledgers ${lastProcessed + 1} to ${latestLedger.sequence}`);
+      logger.info(`Processing ledgers ${lastProcessed + 1} to ${latestLedger.sequence}`);
       
       const newVaults = [];
       let processedLedgers = 0;
@@ -281,7 +282,7 @@ class VaultRegistryService {
           
           processedLedgers++;
         } catch (ledgerError) {
-          console.error(`Error processing ledger ${ledgerSeq}:`, ledgerError);
+          logger.error(`Error processing ledger ${ledgerSeq}:`, ledgerError);
           continue;
         }
       }
@@ -289,10 +290,10 @@ class VaultRegistryService {
       // Update the last processed ledger
       await this.updateLastProcessedLedger(latestLedger.sequence);
 
-      console.log(`Processed ${processedLedgers} ledgers, found ${newVaults.length} new vaults`);
+      logger.info(`Processed ${processedLedgers} ledgers, found ${newVaults.length} new vaults`);
       return { processed: processedLedgers, newVaults };
     } catch (error) {
-      console.error('Error monitoring for new vaults:', error);
+      logger.error('Error monitoring for new vaults:', error);
       Sentry.captureException(error, {
         tags: { operation: 'monitorForNewVaults' }
       });
@@ -330,7 +331,7 @@ class VaultRegistryService {
         }
       }
     } catch (error) {
-      console.error('Error extracting vault deployments:', error);
+      logger.error('Error extracting vault deployments:', error);
     }
 
     return deployments;
@@ -371,7 +372,7 @@ class VaultRegistryService {
       
       return null;
     } catch (error) {
-      console.error('Error analyzing contract deployment:', error);
+      logger.error('Error analyzing contract deployment:', error);
       return null;
     }
   }
@@ -404,10 +405,10 @@ class VaultRegistryService {
       }
 
       await vault.update({ is_active: false });
-      console.log(`Deactivated vault: ${contractId}`);
+      logger.info(`Deactivated vault: ${contractId}`);
       return vault;
     } catch (error) {
-      console.error('Error deactivating vault:', error);
+      logger.error('Error deactivating vault:', error);
       throw error;
     }
   }

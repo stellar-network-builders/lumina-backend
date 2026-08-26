@@ -6,10 +6,11 @@
  * kept as a thin compatibility shim: requiring it ensures the manager is
  * initialized (idempotent) so the `heavy-computation` worker is running.
  */
+const logger = require('../utils/logger');
 const backgroundJobManager = require('./backgroundJobManager');
 
 backgroundJobManager.init().catch((err) =>
-  console.error('Failed to initialize background jobs from heavyComputationWorker:', err.message)
+  logger.error('Failed to initialize background jobs from heavyComputationWorker:', err.message)
 );
 
 module.exports = backgroundJobManager;

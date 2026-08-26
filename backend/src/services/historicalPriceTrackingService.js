@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { VestingMilestone, HistoricalTokenPrice, CostBasisReport, Vault, SubSchedule, Beneficiary } = require('../models');
 const stellarDexPriceService = require('./stellarDexPriceService');
 const priceService = require('./priceService');
@@ -66,7 +67,7 @@ class HistoricalPriceTrackingService {
 
       return milestones;
     } catch (error) {
-      console.error(`Error generating vesting milestones for vault ${vaultId}:`, error);
+      logger.error(`Error generating vesting milestones for vault ${vaultId}:`, error);
       throw error;
     }
   }
@@ -213,7 +214,7 @@ class HistoricalPriceTrackingService {
         return await VestingMilestone.create(milestoneData);
       }
     } catch (error) {
-      console.error('Error creating/updating milestone:', error);
+      logger.error('Error creating/updating milestone:', error);
       return null;
     }
   }
@@ -227,7 +228,7 @@ class HistoricalPriceTrackingService {
     
     if (milestonesNeedingPrices.length === 0) return;
 
-    console.log(`Fetching prices for ${milestonesNeedingPrices.length} milestones`);
+    logger.info(`Fetching prices for ${milestonesNeedingPrices.length} milestones`);
 
     // Group by token and date to minimize API calls
     const priceRequests = new Map();
@@ -268,7 +269,7 @@ class HistoricalPriceTrackingService {
             });
           }
         } catch (error) {
-          console.error(`Error fetching price for ${key}:`, error.message);
+          logger.error(`Error fetching price for ${key}:`, error.message);
         }
       }));
 
@@ -328,7 +329,7 @@ class HistoricalPriceTrackingService {
       // Try Stellar DEX first for VWAP
       priceData = await stellarDexPriceService.getTokenVWAP(tokenAddress, date);
     } catch (stellarError) {
-      console.log(`Stellar DEX failed for ${tokenAddress}, trying fallback...`);
+      logger.info(`Stellar DEX failed for ${tokenAddress}, trying fallback...`);
       
       try {
         // Fallback to existing price service
@@ -340,7 +341,7 @@ class HistoricalPriceTrackingService {
           data_quality: 'fair'
         };
       } catch (fallbackError) {
-        console.error(`All price sources failed for ${tokenAddress}:`, fallbackError.message);
+        logger.error(`All price sources failed for ${tokenAddress}:`, fallbackError.message);
         throw new Error(`Unable to fetch price for ${tokenAddress} on ${dateStr}`);
       }
     }
@@ -358,7 +359,7 @@ class HistoricalPriceTrackingService {
         data_quality: priceData.data_quality || 'good'
       });
     } catch (dbError) {
-      console.error('Error caching price in database:', dbError.message);
+      logger.error('Error caching price in database:', dbError.message);
     }
 
     // Cache in memory
@@ -467,7 +468,7 @@ class HistoricalPriceTrackingService {
 
       return reportData;
     } catch (error) {
-      console.error(`Error generating cost basis report:`, error);
+      logger.error(`Error generating cost basis report:`, error);
       throw error;
     }
   }
@@ -507,7 +508,7 @@ class HistoricalPriceTrackingService {
       return 0;
     }
 
-    console.log(`Backfilling prices for ${milestones.length} milestones`);
+    logger.info(`Backfilling prices for ${milestones.length} milestones`);
     
     await this.fetchPricesForMilestones(milestones);
     
@@ -524,7 +525,7 @@ class HistoricalPriceTrackingService {
     if (!date) syncDate.setDate(syncDate.getDate() - 1); // Default to yesterday
     
     const dateStr = syncDate.toISOString().split('T')[0];
-    console.log(`🕒 Starting daily price sync for all tokens on ${dateStr}`);
+    logger.info(`🕒 Starting daily price sync for all tokens on ${dateStr}`);
 
     try {
       // Get all unique tokens from the database
@@ -532,7 +533,7 @@ class HistoricalPriceTrackingService {
         attributes: ['address', 'symbol']
       });
 
-      console.log(`🔍 Found ${tokens.length} tokens to sync`);
+      logger.info(`🔍 Found ${tokens.length} tokens to sync`);
 
       const results = {
         total: tokens.length,
@@ -565,11 +566,11 @@ class HistoricalPriceTrackingService {
             // Fetch and store price
             await this.getHistoricalPrice(token.address, syncDate);
             results.success++;
-            console.log(`✅ Synced price for ${token.symbol} (${token.address})`);
+            logger.info(`✅ Synced price for ${token.symbol} (${token.address})`);
           } catch (error) {
             results.failed++;
             results.errors.push({ token: token.symbol, address: token.address, error: error.message });
-            console.error(`❌ Failed to sync price for ${token.symbol}:`, error.message);
+            logger.error(`❌ Failed to sync price for ${token.symbol}:`, error.message);
           }
         }));
 
@@ -581,7 +582,7 @@ class HistoricalPriceTrackingService {
 
       return results;
     } catch (error) {
-      console.error('Error in syncDailyPricesForAllTokens:', error);
+      logger.error('Error in syncDailyPricesForAllTokens:', error);
       throw error;
     }
   }

@@ -19,7 +19,8 @@ let uuid;
 try {
   uuid = require('uuid').v4;
 } catch (error) {
-  console.warn('UUID package not found, falling back to crypto.randomUUID');
+  const logger = require('../utils/logger');
+  logger.warn('UUID package not found, falling back to crypto.randomUUID');
   uuid = () => require('crypto').randomUUID();
 }
 

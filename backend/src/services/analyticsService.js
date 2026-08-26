@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { sequelize } = require('../database/connection');
 const { QueryTypes } = require('sequelize');
 
@@ -29,7 +30,7 @@ class AnalyticsService {
         total_claimed: claimer.total_claimed ? claimer.total_claimed.toString() : '0'
       }));
     } catch (error) {
-      console.error('Error fetching top claimers:', error);
+      logger.error('Error fetching top claimers:', error);
       throw error;
     }
   }

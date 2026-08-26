@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const cron = require('node-cron');
 const { Vault, Beneficiary } = require('../models');
 // stellar-sdk v11 exposes the Soroban RPC client as `SorobanRpc.Server`
@@ -21,7 +22,7 @@ class IntegrityMonitoringJob {
     this.server = new SorobanRpc.Server(this.rpcUrl);
 
     if (!this.approvedHash) {
-      console.warn('WARNING: APPROVED_VAULT_WASM_HASH is not defined. Integrity monitoring will log mismatches but cannot verify.');
+      logger.warn('WARNING: APPROVED_VAULT_WASM_HASH is not defined. Integrity monitoring will log mismatches but cannot verify.');
     }
   }
 
@@ -29,16 +30,16 @@ class IntegrityMonitoringJob {
    * Start the integrity monitoring job
    */
   start() {
-    console.log('Initializing Integrity Monitoring Job...');
+    logger.info('Initializing Integrity Monitoring Job...');
     cron.schedule(this.cronSchedule, async () => {
-      console.log('Running Continuous Integrity Monitoring...');
+      logger.info('Running Continuous Integrity Monitoring...');
       try {
         await this.monitorIntegrity();
       } catch (error) {
-        console.error('Error in Integrity Monitoring Job:', error);
+        logger.error('Error in Integrity Monitoring Job:', error);
       }
     });
-    console.log('Integrity Monitoring Job started.');
+    logger.info('Integrity Monitoring Job started.');
   }
 
   /**
@@ -54,32 +55,32 @@ class IntegrityMonitoringJob {
         }
       });
 
-      console.log(`Verifying integrity for ${activeVaults.length} active vaults...`);
+      logger.info(`Verifying integrity for ${activeVaults.length} active vaults...`);
 
       for (const vault of activeVaults) {
         try {
           const onChainHash = await this.getContractWasmHash(vault.address);
           
           if (!onChainHash) {
-            console.error(`Could not fetch wasm_hash for vault ${vault.address}. Skipping...`);
+            logger.error(`Could not fetch wasm_hash for vault ${vault.address}. Skipping...`);
             continue;
           }
 
           if (this.approvedHash && onChainHash !== this.approvedHash) {
-            console.error(`CRITICAL: Integrity failure detected for vault ${vault.address}!`);
-            console.error(`Expected: ${this.approvedHash}`);
-            console.error(`Found:    ${onChainHash}`);
+            logger.error(`CRITICAL: Integrity failure detected for vault ${vault.address}!`);
+            logger.error(`Expected: ${this.approvedHash}`);
+            logger.error(`Found:    ${onChainHash}`);
             
             await this.blacklistVault(vault);
           } else {
-            console.log(`Vault ${vault.address} integrity verified.`);
+            logger.info(`Vault ${vault.address} integrity verified.`);
           }
         } catch (vaultError) {
-          console.error(`Error verifying vault ${vault.address}:`, vaultError.message);
+          logger.error(`Error verifying vault ${vault.address}:`, vaultError.message);
         }
       }
     } catch (error) {
-      console.error('Error during integrity monitoring process:', error);
+      logger.error('Error during integrity monitoring process:', error);
       throw error;
     }
   }
@@ -117,7 +118,7 @@ class IntegrityMonitoringJob {
 
       return null;
     } catch (error) {
-      console.error(`Error fetching WASM hash for ${contractId}:`, error);
+      logger.error(`Error fetching WASM hash for ${contractId}:`, error);
       return null;
     }
   }
@@ -128,7 +129,7 @@ class IntegrityMonitoringJob {
    */
   async blacklistVault(vault) {
     try {
-      console.log(`Blacklisting vault ${vault.address}...`);
+      logger.info(`Blacklisting vault ${vault.address}...`);
       
       // Update vault status in database
       await vault.update({
@@ -140,9 +141,9 @@ class IntegrityMonitoringJob {
       // Notify beneficiaries
       await notificationService.notifyIntegrityFailure(vault);
       
-      console.log(`Vault ${vault.address} blacklisted and beneficiaries notified.`);
+      logger.info(`Vault ${vault.address} blacklisted and beneficiaries notified.`);
     } catch (error) {
-      console.error(`Error blacklisting vault ${vault.address}:`, error);
+      logger.error(`Error blacklisting vault ${vault.address}:`, error);
     }
   }
 }

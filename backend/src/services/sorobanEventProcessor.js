@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { sequelize } = require('../database/connection');
 const { SorobanEvent, ClaimsHistory, SubSchedule, Vault, Beneficiary } = require('../models');
 const Sentry = require('@sentry/node');
@@ -16,11 +17,11 @@ class SorobanEventProcessor {
    */
   async startProcessing() {
     if (this.isProcessing) {
-      console.warn('Soroban Event Processor is already running');
+      logger.warn('Soroban Event Processor is already running');
       return;
     }
 
-    console.log('Starting Soroban Event Processor...');
+    logger.info('Starting Soroban Event Processor...');
     this.isProcessing = true;
 
     while (this.isProcessing) {
@@ -28,7 +29,7 @@ class SorobanEventProcessor {
         await this.processBatch();
         await this.delay(this.processingDelay);
       } catch (error) {
-        console.error('Error in event processing loop:', error);
+        logger.error('Error in event processing loop:', error);
         Sentry.captureException(error, {
           tags: { service: 'soroban-event-processor', operation: 'processing_loop' }
         });
@@ -36,14 +37,14 @@ class SorobanEventProcessor {
       }
     }
 
-    console.log('Soroban Event Processor stopped');
+    logger.info('Soroban Event Processor stopped');
   }
 
   /**
    * Stop processing events
    */
   async stopProcessing() {
-    console.log('Stopping Soroban Event Processor...');
+    logger.info('Stopping Soroban Event Processor...');
     this.isProcessing = false;
   }
 
@@ -61,7 +62,7 @@ class SorobanEventProcessor {
       return;
     }
 
-    console.log(`Processing batch of ${events.length} events...`);
+    logger.info(`Processing batch of ${events.length} events...`);
     const processedEventIds = [];
     const failedEventIds = [];
 
@@ -70,7 +71,7 @@ class SorobanEventProcessor {
         await this.processEvent(event);
         processedEventIds.push(event.id);
       } catch (error) {
-        console.error(`Failed to process event ${event.id}:`, error);
+        logger.error(`Failed to process event ${event.id}:`, error);
         await this.markEventFailed(event.id, error.message);
         failedEventIds.push(event.id);
         
@@ -89,7 +90,7 @@ class SorobanEventProcessor {
       );
     }
 
-    console.log(`Batch completed: ${processedEventIds.length} processed, ${failedEventIds.length} failed`);
+    logger.info(`Batch completed: ${processedEventIds.length} processed, ${failedEventIds.length} failed`);
   }
 
   /**
@@ -105,7 +106,7 @@ class SorobanEventProcessor {
         await this.processTokensClaimed(event);
         break;
       default:
-        console.warn(`Unknown event type: ${event.event_type}`);
+        logger.warn(`Unknown event type: ${event.event_type}`);
         throw new Error(`Unknown event type: ${event.event_type}`);
     }
   }
@@ -118,7 +119,7 @@ class SorobanEventProcessor {
     const eventData = event.event_body;
     const eventBody = eventData.body;
 
-    console.log(`Processing VestingScheduleCreated from ledger ${event.ledger_sequence}`);
+    logger.info(`Processing VestingScheduleCreated from ledger ${event.ledger_sequence}`);
 
     // Extract event data - this would depend on the actual event structure
     const {
@@ -164,7 +165,7 @@ class SorobanEventProcessor {
       is_active: true
     });
 
-    console.log(`Created sub-schedule ${subSchedule.id} for vault ${vault_id}`);
+    logger.info(`Created sub-schedule ${subSchedule.id} for vault ${vault_id}`);
 
     // Update cache
     await this.updateVaultCache(vault_id);
@@ -180,7 +181,7 @@ class SorobanEventProcessor {
     const eventData = event.event_body;
     const eventBody = eventData.body;
 
-    console.log(`Processing TokensClaimed from ledger ${event.ledger_sequence}`);
+    logger.info(`Processing TokensClaimed from ledger ${event.ledger_sequence}`);
 
     // Extract event data
     const {
@@ -205,7 +206,7 @@ class SorobanEventProcessor {
       block_number: event.ledger_sequence
     });
 
-    console.log(`Created claim record ${claimRecord.id} for ${amount_claimed} tokens`);
+    logger.info(`Created claim record ${claimRecord.id} for ${amount_claimed} tokens`);
 
     // Update sub-schedule if vault_id is provided
     if (vault_id) {
@@ -238,7 +239,7 @@ class SorobanEventProcessor {
         start_timestamp: data.start_timestamp || data.startTime || Math.floor(Date.now() / 1000)
       };
     } catch (error) {
-      console.error('Error extracting VestingScheduleCreated data:', error);
+      logger.error('Error extracting VestingScheduleCreated data:', error);
       throw new Error(`Failed to extract VestingScheduleCreated data: ${error.message}`);
     }
   }
@@ -259,7 +260,7 @@ class SorobanEventProcessor {
         vault_id: data.vault_id || data.vaultId
       };
     } catch (error) {
-      console.error('Error extracting TokensClaimed data:', error);
+      logger.error('Error extracting TokensClaimed data:', error);
       throw new Error(`Failed to extract TokensClaimed data: ${error.message}`);
     }
   }
@@ -287,10 +288,10 @@ class SorobanEventProcessor {
           cumulative_claimed_amount: sequelize.literal(`cumulative_claimed_amount + ${amountClaimed}`)
         });
         
-        console.log(`Updated sub-schedule ${subSchedule.id} with claimed amount ${amountClaimed}`);
+        logger.info(`Updated sub-schedule ${subSchedule.id} with claimed amount ${amountClaimed}`);
       }
     } catch (error) {
-      console.error('Error updating sub-schedule:', error);
+      logger.error('Error updating sub-schedule:', error);
       // Don't throw here as this is not critical for the claim record
     }
   }
@@ -312,7 +313,7 @@ class SorobanEventProcessor {
         await cacheService.del(key);
       }
     } catch (error) {
-      console.error('Error updating vault cache:', error);
+      logger.error('Error updating vault cache:', error);
       // Don't throw as cache issues shouldn't stop processing
     }
   }
@@ -360,15 +361,15 @@ class SorobanEventProcessor {
       limit
     });
 
-    console.log(`Retrying ${failedEvents.length} failed events...`);
+    logger.info(`Retrying ${failedEvents.length} failed events...`);
 
     for (const event of failedEvents) {
       try {
         // Clear error and reset processed status
         await event.update({ processing_error: null, processed: false });
-        console.log(`Reset event ${event.id} for retry`);
+        logger.info(`Reset event ${event.id} for retry`);
       } catch (error) {
-        console.error(`Failed to reset event ${event.id}:`, error);
+        logger.error(`Failed to reset event ${event.id}:`, error);
       }
     }
   }

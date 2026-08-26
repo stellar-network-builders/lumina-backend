@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const QueueService = require('./queueService');
 const SorobanRpcClient = require('./sorobanRpcClient');
 const Sentry = require('@sentry/node');
@@ -36,12 +37,12 @@ class RpcQueueService {
    */
   async start() {
     if (this.isStarted) {
-      console.warn('RpcQueueService is already started');
+      logger.warn('RpcQueueService is already started');
       return;
     }
 
     try {
-      console.log('Starting RPC Queue Service...');
+      logger.info('Starting RPC Queue Service...');
       
       // Connect to Redis
       await this.queueService.connect();
@@ -53,10 +54,10 @@ class RpcQueueService {
       await this.setupWorkers();
       
       this.isStarted = true;
-      console.log('RPC Queue Service started successfully');
+      logger.info('RPC Queue Service started successfully');
       
     } catch (error) {
-      console.error('Failed to start RPC Queue Service:', error);
+      logger.error('Failed to start RPC Queue Service:', error);
       Sentry.captureException(error, {
         tags: { service: 'rpc-queue-service', operation: 'start' }
       });
@@ -69,21 +70,21 @@ class RpcQueueService {
    */
   async stop() {
     if (!this.isStarted) {
-      console.warn('RpcQueueService is not started');
+      logger.warn('RpcQueueService is not started');
       return;
     }
 
     try {
-      console.log('Stopping RPC Queue Service...');
+      logger.info('Stopping RPC Queue Service...');
       
       // Disconnect from Redis
       await this.queueService.disconnect();
       
       this.isStarted = false;
-      console.log('RPC Queue Service stopped successfully');
+      logger.info('RPC Queue Service stopped successfully');
       
     } catch (error) {
-      console.error('Error stopping RPC Queue Service:', error);
+      logger.error('Error stopping RPC Queue Service:', error);
       throw error;
     }
   }
@@ -128,7 +129,7 @@ class RpcQueueService {
       }
     });
 
-    console.log('RPC queues setup completed');
+    logger.info('RPC queues setup completed');
   }
 
   /**
@@ -170,7 +171,7 @@ class RpcQueueService {
       }
     );
 
-    console.log('RPC workers setup completed');
+    logger.info('RPC workers setup completed');
   }
 
   /**
@@ -229,10 +230,10 @@ class RpcQueueService {
       });
 
       this.stats.totalJobs++;
-      console.log(`Added RPC job ${job.id} (${method}) to ${queueName} queue`);
+      logger.info(`Added RPC job ${job.id} (${method}) to ${queueName} queue`);
       return job;
     } catch (error) {
-      console.error(`Failed to add RPC job to queue:`, error);
+      logger.error(`Failed to add RPC job to queue:`, error);
       Sentry.captureException(error, {
         tags: { service: 'rpc-queue-service', operation: 'add-job' },
         extra: { method, params, options }
@@ -251,7 +252,7 @@ class RpcQueueService {
     const startTime = Date.now();
 
     try {
-      console.log(`Processing RPC job ${job.id} (${method})`);
+      logger.info(`Processing RPC job ${job.id} (${method})`);
       
       // Get RPC client
       const rpcClient = this.getRpcClient(rpcUrl);
@@ -264,7 +265,7 @@ class RpcQueueService {
       const duration = Date.now() - startTime;
       this.stats.successfulJobs++;
       
-      console.log(`RPC job ${job.id} completed in ${duration}ms`);
+      logger.info(`RPC job ${job.id} completed in ${duration}ms`);
       
       return {
         success: true,
@@ -281,7 +282,7 @@ class RpcQueueService {
       const duration = Date.now() - startTime;
       const attemptsMade = job.attemptsMade + 1;
       
-      console.error(`RPC job ${job.id} failed (attempt ${attemptsMade}):`, error.message);
+      logger.error(`RPC job ${job.id} failed (attempt ${attemptsMade}):`, error.message);
       
       // Check if this is the final failure
       if (attemptsMade >= this.maxRetries) {
@@ -337,13 +338,13 @@ class RpcQueueService {
         }
       );
 
-      console.log(`Moved failed RPC job ${job.id} to Dead Letter Queue`);
+      logger.info(`Moved failed RPC job ${job.id} to Dead Letter Queue`);
       
       // Send alert for critical failures
       await this.sendDlqAlert(dlqJobData);
       
     } catch (dlqError) {
-      console.error('Failed to move job to Dead Letter Queue:', dlqError);
+      logger.error('Failed to move job to Dead Letter Queue:', dlqError);
       Sentry.captureException(dlqError, {
         tags: { service: 'rpc-queue-service', operation: 'move-to-dlq' },
         extra: { originalJobId: job.id, error: error.message }
@@ -360,7 +361,7 @@ class RpcQueueService {
     const { originalJobId, method, error, attemptsMade, metadata } = job.data;
     
     try {
-      console.log(`Processing DLQ job for failed RPC call ${originalJobId} (${method})`);
+      logger.info(`Processing DLQ job for failed RPC call ${originalJobId} (${method})`);
       
       // Log to monitoring systems
       await this.logDlqEvent(job.data);
@@ -381,7 +382,7 @@ class RpcQueueService {
       };
       
     } catch (error) {
-      console.error(`Failed to process DLQ job ${job.id}:`, error);
+      logger.error(`Failed to process DLQ job ${job.id}:`, error);
       throw error;
     }
   }
@@ -418,7 +419,7 @@ ${JSON.stringify(dlqJobData.params, null, 2)}
       });
       
     } catch (alertError) {
-      console.error('Failed to send DLQ alert:', alertError);
+      logger.error('Failed to send DLQ alert:', alertError);
       // Don't throw - alert failure shouldn't break the queue
     }
   }
@@ -430,7 +431,7 @@ ${JSON.stringify(dlqJobData.params, null, 2)}
   async logDlqEvent(dlqJobData) {
     try {
       // This could be extended to log to monitoring systems
-      console.log('DLQ Event:', {
+      logger.info('DLQ Event:', {
         jobId: dlqJobData.originalJobId,
         method: dlqJobData.method,
         error: dlqJobData.error.message,
@@ -455,7 +456,7 @@ ${JSON.stringify(dlqJobData.params, null, 2)}
       });
       
     } catch (logError) {
-      console.error('Failed to log DLQ event:', logError);
+      logger.error('Failed to log DLQ event:', logError);
     }
   }
 
@@ -489,7 +490,7 @@ ${JSON.stringify(dlqJobData.params, null, 2)}
         }
       };
     } catch (error) {
-      console.error('Failed to get RPC queue stats:', error);
+      logger.error('Failed to get RPC queue stats:', error);
       throw error;
     }
   }
@@ -529,11 +530,11 @@ ${JSON.stringify(dlqJobData.params, null, 2)}
         timeout: metadata?.timeout || 15000
       });
 
-      console.log(`Retried DLQ job ${dlqJobId} as new job ${newJob.id}`);
+      logger.info(`Retried DLQ job ${dlqJobId} as new job ${newJob.id}`);
       return newJob;
       
     } catch (error) {
-      console.error(`Failed to retry DLQ job ${dlqJobId}:`, error);
+      logger.error(`Failed to retry DLQ job ${dlqJobId}:`, error);
       throw error;
     }
   }
@@ -552,7 +553,7 @@ ${JSON.stringify(dlqJobData.params, null, 2)}
    */
   async clearDlq() {
     await this.queueService.clearQueue(this.QUEUE_NAMES.DEAD_LETTER);
-    console.log('Dead Letter Queue cleared');
+    logger.info('Dead Letter Queue cleared');
   }
 
   /**
@@ -563,7 +564,7 @@ ${JSON.stringify(dlqJobData.params, null, 2)}
       this.queueService.pauseQueue(this.QUEUE_NAMES.RPC_FETCH),
       this.queueService.pauseQueue(this.QUEUE_NAMES.PRIORITY_RPC)
     ]);
-    console.log('RPC queues paused');
+    logger.info('RPC queues paused');
   }
 
   /**
@@ -574,7 +575,7 @@ ${JSON.stringify(dlqJobData.params, null, 2)}
       this.queueService.resumeQueue(this.QUEUE_NAMES.RPC_FETCH),
       this.queueService.resumeQueue(this.QUEUE_NAMES.PRIORITY_RPC)
     ]);
-    console.log('RPC queues resumed');
+    logger.info('RPC queues resumed');
   }
 
   /**
@@ -612,7 +613,7 @@ ${JSON.stringify(dlqJobData.params, null, 2)}
       dlqJobs: 0,
       retriedJobs: 0
     };
-    console.log('RPC queue statistics reset');
+    logger.info('RPC queue statistics reset');
   }
 }
 

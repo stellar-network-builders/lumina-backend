@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const tvlService = require('../../services/tvlService');
 
 export const tvlResolver = {
@@ -12,7 +13,7 @@ export const tvlResolver = {
           lastUpdatedAt: tvlStats.last_updated_at
         };
       } catch (error) {
-        console.error('Error fetching TVL stats:', error);
+        logger.error('Error fetching TVL stats:', error);
         throw new Error(`Failed to fetch TVL stats: ${error.message}`);
       }
     }

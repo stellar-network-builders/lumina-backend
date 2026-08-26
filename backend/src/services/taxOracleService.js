@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const TaxJurisdiction = require('../models/taxJurisdiction');
 
 /**
@@ -16,14 +17,14 @@ class TaxOracleService {
     try {
       return await this._fetchFromTaxBit(jurisdictionCode, amountUsd, eventType);
     } catch (error) {
-      console.warn(`TaxBit Oracle failed for ${jurisdictionCode}, trying secondary...`);
+      logger.warn(`TaxBit Oracle failed for ${jurisdictionCode}, trying secondary...`);
     }
 
     // 2. Try Secondary Oracle (e.g., CoinTracker)
     try {
       return await this._fetchFromCoinTracker(jurisdictionCode, amountUsd, eventType);
     } catch (error) {
-      console.warn(`CoinTracker Oracle failed, falling back to internal rules.`);
+      logger.warn(`CoinTracker Oracle failed, falling back to internal rules.`);
     }
 
     // 3. Internal Fallback

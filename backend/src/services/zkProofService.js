@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const axios = require('axios');
 
 class ZKProofService {
@@ -68,7 +69,7 @@ class ZKProofService {
       }
 
     } catch (error) {
-      console.error('ZK-proof generation error:', error);
+      logger.error('ZK-proof generation error:', error);
       if (error.response) {
         throw new Error(`Circom service error: ${error.response.data.message || error.response.statusText}`);
       } else if (error.code === 'ECONNREFUSED') {
@@ -94,7 +95,7 @@ class ZKProofService {
 
       return response.data.verified === true;
     } catch (error) {
-      console.error('ZK-proof verification error:', error);
+      logger.error('ZK-proof verification error:', error);
       return false;
     }
   }

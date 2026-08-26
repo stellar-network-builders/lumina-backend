@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { AnnualVestingStatement, Vault, SubSchedule, ClaimsHistory, Token, Organization, Beneficiary } = require('../models');
 const { Op } = require('sequelize');
 const priceService = require('./priceService');
@@ -25,12 +26,12 @@ class AnnualVestingStatementService {
    */
   async generateAnnualStatement(userAddress, year) {
     try {
-      console.log(`Generating annual statement for ${userAddress} for year ${year}`);
+      logger.info(`Generating annual statement for ${userAddress} for year ${year}`);
       
       // Check if statement already exists
       const existingStatement = await AnnualVestingStatement.getStatementByUserAndYear(userAddress, year);
       if (existingStatement) {
-        console.log(`Statement already exists for ${userAddress} year ${year}`);
+        logger.info(`Statement already exists for ${userAddress} year ${year}`);
         return existingStatement;
       }
 
@@ -66,11 +67,11 @@ class AnnualVestingStatementService {
         number_of_claims: statementData.summary.numberOfClaims,
       });
 
-      console.log(`Successfully generated annual statement for ${userAddress} year ${year}`);
+      logger.info(`Successfully generated annual statement for ${userAddress} year ${year}`);
       return statement;
       
     } catch (error) {
-      console.error(`Error generating annual statement for ${userAddress} year ${year}:`, error);
+      logger.error(`Error generating annual statement for ${userAddress} year ${year}:`, error);
       Sentry.captureException(error, {
         tags: { service: 'annual-statement' },
         extra: { userAddress, year }
@@ -348,7 +349,7 @@ class AnnualVestingStatementService {
       const signature = crypto.sign('sha256', hash, this.transparencyKey);
       return signature.toString('base64');
     } catch (error) {
-      console.error('Error signing PDF:', error);
+      logger.error('Error signing PDF:', error);
       throw new Error('Failed to sign PDF');
     }
   }
@@ -424,7 +425,7 @@ class AnnualVestingStatementService {
       
       return isValid;
     } catch (error) {
-      console.error('Error verifying signature:', error);
+      logger.error('Error verifying signature:', error);
       return false;
     }
   }

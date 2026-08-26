@@ -5,6 +5,7 @@
  * enforcing compliance gates for restricted securities claims.
  */
 
+const logger = require('../utils/logger');
 const { Rule144Compliance, Vault, SubSchedule } = require('../models');
 const Sentry = require('@sentry/node');
 const BigNumber = require('bignumber.js');
@@ -43,10 +44,10 @@ class Rule144ComplianceService {
         jurisdiction
       });
 
-      console.log(`Created Rule 144 compliance record for vault ${vaultId}, user ${userAddress}`);
+      logger.info(`Created Rule 144 compliance record for vault ${vaultId}, user ${userAddress}`);
       return complianceRecord;
     } catch (error) {
-      console.error('Error creating compliance record:', error);
+      logger.error('Error creating compliance record:', error);
       Sentry.captureException(error, {
         tags: { operation: 'createComplianceRecord' },
         extra: { vaultId, userAddress }
@@ -120,7 +121,7 @@ class Rule144ComplianceService {
           : `Claim is restricted. Holding period ends in ${daysUntilCompliance} days (${complianceRecord.holding_period_end_date.toDateString()})`
       };
     } catch (error) {
-      console.error('Error checking claim compliance:', error);
+      logger.error('Error checking claim compliance:', error);
       Sentry.captureException(error, {
         tags: { operation: 'checkClaimCompliance' },
         extra: { vaultId, userAddress }
@@ -162,7 +163,7 @@ class Rule144ComplianceService {
         complianceRecord.amount_withdrawn_restricted = totalRestricted.toFixed(18);
 
         // Log restricted withdrawal for compliance monitoring
-        console.warn(`RESTRICTED WITHDRAWAL: User ${userAddress} claimed ${amountClaimed} from vault ${vaultId} before holding period end`);
+        logger.warn(`RESTRICTED WITHDRAWAL: User ${userAddress} claimed ${amountClaimed} from vault ${vaultId} before holding period end`);
         
         // Send to Sentry for monitoring
         Sentry.captureMessage('Rule 144 violation - Restricted withdrawal', {
@@ -184,7 +185,7 @@ class Rule144ComplianceService {
       await complianceRecord.save();
       return complianceRecord;
     } catch (error) {
-      console.error('Error recording claim attempt:', error);
+      logger.error('Error recording claim attempt:', error);
       Sentry.captureException(error, {
         tags: { operation: 'recordClaimAttempt' },
         extra: { vaultId, userAddress, amountClaimed }
@@ -227,7 +228,7 @@ class Rule144ComplianceService {
         amountWithdrawnRestricted: record.amount_withdrawn_restricted
       }));
     } catch (error) {
-      console.error('Error getting vault compliance status:', error);
+      logger.error('Error getting vault compliance status:', error);
       Sentry.captureException(error, {
         tags: { operation: 'getVaultComplianceStatus' },
         extra: { vaultId }
@@ -271,10 +272,10 @@ class Rule144ComplianceService {
       
       await complianceRecord.save();
       
-      console.log(`Updated Rule 144 compliance record for vault ${vaultId}, user ${userAddress} by admin ${verifiedBy}`);
+      logger.info(`Updated Rule 144 compliance record for vault ${vaultId}, user ${userAddress} by admin ${verifiedBy}`);
       return complianceRecord;
     } catch (error) {
-      console.error('Error updating compliance record:', error);
+      logger.error('Error updating compliance record:', error);
       Sentry.captureException(error, {
         tags: { operation: 'updateComplianceRecord' },
         extra: { vaultId, userAddress, updates, verifiedBy }
@@ -315,7 +316,7 @@ class Rule144ComplianceService {
         complianceRate: total > 0 ? ((compliant / total) * 100).toFixed(2) : 0
       };
     } catch (error) {
-      console.error('Error getting compliance statistics:', error);
+      logger.error('Error getting compliance statistics:', error);
       Sentry.captureException(error, {
         tags: { operation: 'getComplianceStatistics' },
         extra: { vaultId }

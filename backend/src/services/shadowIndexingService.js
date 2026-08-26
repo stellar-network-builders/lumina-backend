@@ -1,4 +1,5 @@
 // stellar-sdk v11: Soroban RPC client is `SorobanRpc.Server`, classic is `Horizon.Server`.
+const logger = require('../utils/logger');
 const { Horizon, SorobanRpc } = require('stellar-sdk');
 const EventEmitter = require('events');
 const Sentry = require('@sentry/node');
@@ -43,17 +44,17 @@ class ShadowIndexingService extends EventEmitter {
 
   async start() {
     if (!this.isEnabled) {
-      console.log('Shadow-indexing is disabled');
+      logger.info('Shadow-indexing is disabled');
       return;
     }
 
     if (this.isIndexing) {
-      console.log('Shadow-indexing is already running');
+      logger.info('Shadow-indexing is already running');
       return;
     }
 
     try {
-      console.log('Starting shadow-indexing service...');
+      logger.info('Starting shadow-indexing service...');
       
       // Get current ledger
       const currentLedger = await this.getCurrentLedger();
@@ -68,10 +69,10 @@ class ShadowIndexingService extends EventEmitter {
       this.isIndexing = true;
       this.emit('started', { name: this.name, startLedger: currentLedger });
       
-      console.log(`Shadow-indexing service started successfully from ledger ${currentLedger}`);
+      logger.info(`Shadow-indexing service started successfully from ledger ${currentLedger}`);
       
     } catch (error) {
-      console.error('Failed to start shadow-indexing service:', error);
+      logger.error('Failed to start shadow-indexing service:', error);
       Sentry.captureException(error);
       throw error;
     }
@@ -82,7 +83,7 @@ class ShadowIndexingService extends EventEmitter {
       return;
     }
 
-    console.log('Stopping shadow-indexing service...');
+    logger.info('Stopping shadow-indexing service...');
     
     if (this.indexingInterval) {
       clearInterval(this.indexingInterval);
@@ -97,7 +98,7 @@ class ShadowIndexingService extends EventEmitter {
     this.isIndexing = false;
     this.emit('stopped', { name: this.name });
     
-    console.log('Shadow-indexing service stopped');
+    logger.info('Shadow-indexing service stopped');
   }
 
   startIndexing() {
@@ -112,7 +113,7 @@ class ShadowIndexingService extends EventEmitter {
         }
         
       } catch (error) {
-        console.error('Error in shadow-indexing loop:', error);
+        logger.error('Error in shadow-indexing loop:', error);
         Sentry.captureException(error);
         this.emit('error', error);
       }
@@ -124,7 +125,7 @@ class ShadowIndexingService extends EventEmitter {
       try {
         await this.performConsistencyCheck();
       } catch (error) {
-        console.error('Error in consistency monitoring:', error);
+        logger.error('Error in consistency monitoring:', error);
         Sentry.captureException(error);
       }
     }, this.config.validationInterval * 1000);
@@ -135,7 +136,7 @@ class ShadowIndexingService extends EventEmitter {
       const latestLedger = await this.horizon.ledgers().order('desc').limit(1).call();
       return parseInt(latestLedger.records[0].sequence);
     } catch (error) {
-      console.error('Error fetching current ledger:', error);
+      logger.error('Error fetching current ledger:', error);
       throw error;
     }
   }
@@ -145,7 +146,7 @@ class ShadowIndexingService extends EventEmitter {
       const ledger = await this.horizon.ledgers().ledger(ledgerSequence).call();
       return ledger;
     } catch (error) {
-      console.error(`Error fetching ledger details for ${ledgerSequence}:`, error);
+      logger.error(`Error fetching ledger details for ${ledgerSequence}:`, error);
       throw error;
     }
   }
@@ -159,7 +160,7 @@ class ShadowIndexingService extends EventEmitter {
       
       return transactions.records;
     } catch (error) {
-      console.error(`Error fetching transactions for ledger ${ledgerSequence}:`, error);
+      logger.error(`Error fetching transactions for ledger ${ledgerSequence}:`, error);
       throw error;
     }
   }
@@ -210,7 +211,7 @@ class ShadowIndexingService extends EventEmitter {
       return ledgerData;
       
     } catch (error) {
-      console.error(`[${this.name}] Error processing ledger ${ledgerSequence}:`, error);
+      logger.error(`[${this.name}] Error processing ledger ${ledgerSequence}:`, error);
       Sentry.captureException(error);
       throw error;
     }
@@ -234,7 +235,7 @@ class ShadowIndexingService extends EventEmitter {
     const startTime = Date.now();
     
     try {
-      console.log('Performing shadow-indexing consistency check...');
+      logger.info('Performing shadow-indexing consistency check...');
       
       // For now, we'll simulate consistency checks with the main indexer
       // In a real implementation, you would compare with the main indexer's data
@@ -273,13 +274,13 @@ class ShadowIndexingService extends EventEmitter {
       // Emit event for monitoring
       this.emit('consistencyCheck', consistencyReport);
       
-      console.log(`Consistency check completed in ${consistencyReport.validationDuration}ms - ` +
+      logger.info(`Consistency check completed in ${consistencyReport.validationDuration}ms - ` +
                   `Issues: ${inconsistencies.length}, Critical: ${criticalIssues.length}, Warnings: ${warningIssues.length}`);
       
       return consistencyReport;
       
     } catch (error) {
-      console.error('Error during consistency check:', error);
+      logger.error('Error during consistency check:', error);
       Sentry.captureException(error);
       this.emit('error', error);
       throw error;
@@ -307,7 +308,7 @@ class ShadowIndexingService extends EventEmitter {
     
     // Check if failover is needed
     if (report.criticalIssues >= this.config.failoverThreshold && this.config.autoFailover) {
-      console.warn('Critical inconsistency threshold reached, considering failover...');
+      logger.warn('Critical inconsistency threshold reached, considering failover...');
       this.emit('failoverRequired', report);
       await this.sendFailoverAlert(report);
     }
@@ -329,10 +330,10 @@ class ShadowIndexingService extends EventEmitter {
         `**Recommendation**: Immediate investigation required - potential data corruption detected`;
 
       await slackWebhookService.sendAlert(message, 'critical');
-      console.warn('Critical consistency alert sent');
+      logger.warn('Critical consistency alert sent');
       
     } catch (error) {
-      console.error('Failed to send critical consistency alert:', error);
+      logger.error('Failed to send critical consistency alert:', error);
       Sentry.captureException(error);
     }
   }
@@ -348,10 +349,10 @@ class ShadowIndexingService extends EventEmitter {
         `**Recommendation**: Monitor closely - investigate if issues persist`;
 
       await slackWebhookService.sendAlert(message, 'warning');
-      console.warn('Warning consistency alert sent');
+      logger.warn('Warning consistency alert sent');
       
     } catch (error) {
-      console.error('Failed to send warning consistency alert:', error);
+      logger.error('Failed to send warning consistency alert:', error);
       Sentry.captureException(error);
     }
   }
@@ -366,10 +367,10 @@ class ShadowIndexingService extends EventEmitter {
         `**Action Required**: Immediate failover recommended`;
 
       await slackWebhookService.sendAlert(message, 'critical');
-      console.warn('Failover alert sent');
+      logger.warn('Failover alert sent');
       
     } catch (error) {
-      console.error('Failed to send failover alert:', error);
+      logger.error('Failed to send failover alert:', error);
       Sentry.captureException(error);
     }
   }
@@ -386,7 +387,7 @@ class ShadowIndexingService extends EventEmitter {
       console.info('Recovery alert sent');
       
     } catch (error) {
-      console.error('Failed to send recovery alert:', error);
+      logger.error('Failed to send recovery alert:', error);
       Sentry.captureException(error);
     }
   }
@@ -427,7 +428,7 @@ class ShadowIndexingService extends EventEmitter {
       criticalIssues: 0,
       warningIssues: 0
     };
-    console.log('Shadow-indexing service reset completed');
+    logger.info('Shadow-indexing service reset completed');
   }
 }
 

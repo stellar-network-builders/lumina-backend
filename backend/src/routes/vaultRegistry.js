@@ -4,6 +4,7 @@ const vaultRegistryService = require('../services/vaultRegistryService');
 const Sentry = require('@sentry/node');
 const { applyPrivacyMasking } = require('../utils/privacyMasking');
 const authService = require('../services/authService');
+const logger = require('../utils/logger');
 
 /**
  * @swagger
@@ -150,7 +151,7 @@ router.get('/vaults/by-creator/:creatorAddress', async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Error in list_vaults_by_creator:', error);
+    logger.error('Error in list_vaults_by_creator:', error);
     Sentry.captureException(error, {
       tags: { route: 'vaultRegistry', endpoint: 'list_vaults_by_creator' },
       extra: { params: req.params, query: req.query }
@@ -226,7 +227,7 @@ router.get('/vaults/search', async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Error in search_vaults:', error);
+    logger.error('Error in search_vaults:', error);
     Sentry.captureException(error, {
       tags: { route: 'vaultRegistry', endpoint: 'search_vaults' },
       extra: { query: req.query }
@@ -292,7 +293,7 @@ router.get('/vaults', async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Error in get_all_vaults:', error);
+    logger.error('Error in get_all_vaults:', error);
     Sentry.captureException(error, {
       tags: { route: 'vaultRegistry', endpoint: 'get_all_vaults' },
       extra: { query: req.query }
@@ -366,7 +367,7 @@ router.get('/vaults/:contractId', authService.authenticate(false), async (req, r
       data: responseData
     });
   } catch (error) {
-    console.error('Error in get_vault_by_id:', error);
+    logger.error('Error in get_vault_by_id:', error);
     Sentry.captureException(error, {
       tags: { route: 'vaultRegistry', endpoint: 'get_vault_by_id' },
       extra: { params: req.params }
@@ -463,7 +464,7 @@ router.get('/stats', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error in get_registry_stats:', error);
+    logger.error('Error in get_registry_stats:', error);
     Sentry.captureException(error, {
       tags: { route: 'vaultRegistry', endpoint: 'get_registry_stats' }
     });

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { walletRateLimiter } = require('../util/wallet-ratelimit.util');
 
 // Express middleware for wallet-based rate limiting
@@ -48,7 +49,7 @@ const walletRateLimitMiddleware = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error('Wallet rate limit middleware error:', error);
+    logger.error('Wallet rate limit middleware error:', error);
     
     // If there's an error (e.g., Redis down), allow the request but log it
     next();
@@ -106,7 +107,7 @@ const graphqlWalletRateLimitMiddleware = (options = {}) => {
       }
       
       // If there's another error (e.g., Redis down), allow the request but log it
-      console.error('GraphQL wallet rate limit middleware error:', error);
+      logger.error('GraphQL wallet rate limit middleware error:', error);
       return resolve(parent, args, context, info);
     }
   };
@@ -117,7 +118,7 @@ const getWalletRateLimitStatus = async (walletAddress) => {
   try {
     return await walletRateLimiter.getRateLimitStatus(walletAddress);
   } catch (error) {
-    console.error('Failed to get wallet rate limit status:', error);
+    logger.error('Failed to get wallet rate limit status:', error);
     return null;
   }
 };
@@ -128,7 +129,7 @@ const resetWalletRateLimit = async (walletAddress) => {
     await walletRateLimiter.resetRateLimit(walletAddress);
     return true;
   } catch (error) {
-    console.error('Failed to reset wallet rate limit:', error);
+    logger.error('Failed to reset wallet rate limit:', error);
     return false;
   }
 };

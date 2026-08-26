@@ -7,6 +7,7 @@ const stellarPathPaymentListener = require('../services/stellarPathPaymentListen
 const authService = require('../services/authService');
 const authMiddleware = authService.authenticate();
 const { body, param, query, validationResult } = require('express-validator');
+const logger = require('../utils/logger');
 
 /**
  * @route GET /api/conversions/user/:userAddress
@@ -88,7 +89,7 @@ router.get('/user/:userAddress',
       });
 
     } catch (error) {
-      console.error('Error fetching user conversion events:', error);
+      logger.error('Error fetching user conversion events:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',
@@ -130,7 +131,7 @@ router.get('/user/:userAddress/analytics',
       });
 
     } catch (error) {
-      console.error('Error fetching user analytics:', error);
+      logger.error('Error fetching user analytics:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',
@@ -172,7 +173,7 @@ router.post('/cost-basis/:userAddress/:taxYear',
       });
 
     } catch (error) {
-      console.error('Error generating cost basis report:', error);
+      logger.error('Error generating cost basis report:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',
@@ -227,7 +228,7 @@ router.get('/cost-basis/:userAddress/:taxYear',
       });
 
     } catch (error) {
-      console.error('Error fetching cost basis report:', error);
+      logger.error('Error fetching cost basis report:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',
@@ -276,7 +277,7 @@ router.get('/exchange-rates/:sourceAsset/:destinationAsset',
       });
 
     } catch (error) {
-      console.error('Error fetching exchange rate analytics:', error);
+      logger.error('Error fetching exchange rate analytics:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',
@@ -319,7 +320,7 @@ router.get('/system-stats',
       });
 
     } catch (error) {
-      console.error('Error fetching system stats:', error);
+      logger.error('Error fetching system stats:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',
@@ -347,7 +348,7 @@ router.get('/listener/status',
       });
 
     } catch (error) {
-      console.error('Error fetching listener status:', error);
+      logger.error('Error fetching listener status:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',
@@ -375,7 +376,7 @@ router.post('/listener/start',
       });
 
     } catch (error) {
-      console.error('Error starting listener:', error);
+      logger.error('Error starting listener:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to start path payment listener',
@@ -403,7 +404,7 @@ router.post('/listener/stop',
       });
 
     } catch (error) {
-      console.error('Error stopping listener:', error);
+      logger.error('Error stopping listener:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to stop path payment listener',
@@ -430,7 +431,7 @@ router.get('/health', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Health check failed:', error);
+    logger.error('Health check failed:', error);
     res.status(500).json({
       success: false,
       status: 'unhealthy',

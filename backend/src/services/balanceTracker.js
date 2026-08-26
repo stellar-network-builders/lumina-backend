@@ -5,6 +5,7 @@
  * including verification of actual received amounts after deposits.
  */
 
+const logger = require('../utils/logger');
 const axios = require('axios');
 const { BalanceQueryFailedError } = require('../errors/VaultErrors');
 const { executeRpcWithRetry } = require('../../../rpc-retry');
@@ -61,7 +62,7 @@ class BalanceTracker {
       
       return balance;
     } catch (error) {
-      console.error(`Balance query failed for token ${tokenAddress} in vault ${vaultAddress}:`, error);
+      logger.error(`Balance query failed for token ${tokenAddress} in vault ${vaultAddress}:`, error);
       throw new BalanceQueryFailedError(tokenAddress, vaultAddress, error);
     }
   }
@@ -115,7 +116,7 @@ class BalanceTracker {
         throw error;
       }
       
-      console.error(`Deposit verification failed for token ${tokenAddress} in vault ${vaultAddress}:`, error);
+      logger.error(`Deposit verification failed for token ${tokenAddress} in vault ${vaultAddress}:`, error);
       throw new BalanceQueryFailedError(tokenAddress, vaultAddress, error);
     }
   }

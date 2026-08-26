@@ -1,5 +1,6 @@
 'use strict';
 
+const logger = require('../utils/logger');
 const EventPriorityQueue = require('../utils/eventPriorityQueue');
 const { VestingMilestone, SubSchedule, Vault, Beneficiary } = require('../models');
 const { Op } = require('sequelize');
@@ -23,16 +24,16 @@ class VestingUnlockSyncService {
   async start() {
     if (this.timerId) return;
 
-    console.log('Starting Vesting Unlock Sync Service...');
+    logger.info('Starting Vesting Unlock Sync Service...');
     await this.loadFutureMilestones();
 
     this.timerId = setInterval(() => {
       this.processDueEvents().catch(err => {
-        console.error('Error in VestingUnlockSyncService processing:', err);
+        logger.error('Error in VestingUnlockSyncService processing:', err);
       });
     }, this.checkInterval);
 
-    console.log('Vesting Unlock Sync Service started.');
+    logger.info('Vesting Unlock Sync Service started.');
   }
 
   /**
@@ -42,7 +43,7 @@ class VestingUnlockSyncService {
     if (this.timerId) {
       clearInterval(this.timerId);
       this.timerId = null;
-      console.log('Vesting Unlock Sync Service stopped.');
+      logger.info('Vesting Unlock Sync Service stopped.');
     }
   }
 
@@ -71,7 +72,7 @@ class VestingUnlockSyncService {
         ]
       });
 
-      console.log(`Loading ${subSchedules.length} sub-schedules into unlock queue...`);
+      logger.info(`Loading ${subSchedules.length} sub-schedules into unlock queue...`);
 
       for (const sub of subSchedules) {
         if (sub.cliff_date && sub.cliff_date > now) {
@@ -91,9 +92,9 @@ class VestingUnlockSyncService {
         }
       }
 
-      console.log(`Priority queue populated with ${this.queue.size()} future events.`);
+      logger.info(`Priority queue populated with ${this.queue.size()} future events.`);
     } catch (error) {
-      console.error('Failed to load future milestones:', error);
+      logger.error('Failed to load future milestones:', error);
       throw error;
     }
   }
@@ -106,7 +107,7 @@ class VestingUnlockSyncService {
    */
   scheduleEvent(event, timestamp) {
     this.queue.enqueue(event, timestamp);
-    console.log(`Scheduled event ${event.type} for ${timestamp}`);
+    logger.info(`Scheduled event ${event.type} for ${timestamp}`);
   }
 
   /**
@@ -121,7 +122,7 @@ class VestingUnlockSyncService {
       const dueEvents = this.queue.getDueEvents(now);
 
       if (dueEvents.length > 0) {
-        console.log(`Processing ${dueEvents.length} due unlock events...`);
+        logger.info(`Processing ${dueEvents.length} due unlock events...`);
         
         for (const event of dueEvents) {
           await this.handleEvent(event);
@@ -138,7 +139,7 @@ class VestingUnlockSyncService {
    */
   async handleEvent(event) {
     const { type, subScheduleId, vaultId } = event;
-    console.log(`Handling ${type} for sub-schedule ${subScheduleId}`);
+    logger.info(`Handling ${type} for sub-schedule ${subScheduleId}`);
 
     try {
       // 1. Log milestone in database
@@ -147,7 +148,7 @@ class VestingUnlockSyncService {
       });
 
       if (!sub) {
-        console.warn(`Sub-schedule ${subScheduleId} not found, skipping event.`);
+        logger.warn(`Sub-schedule ${subScheduleId} not found, skipping event.`);
         return;
       }
 
@@ -173,10 +174,10 @@ class VestingUnlockSyncService {
       }
 
       // 2. Trigger notifications/analytics updates (simulated)
-      console.log(`Successfully processed ${type} for vault ${vaultId}`);
+      logger.info(`Successfully processed ${type} for vault ${vaultId}`);
       
     } catch (error) {
-      console.error(`Error handling event ${type}:`, error);
+      logger.error(`Error handling event ${type}:`, error);
     }
   }
 

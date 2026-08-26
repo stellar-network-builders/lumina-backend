@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const auditLogger = require('../services/auditLogger');
 
 let metricsService;
@@ -117,7 +118,7 @@ class QueryPerformanceMonitor {
       }
     } catch (err) {
       // Never let logging failures interfere with query execution.
-      console.error('Failed to log slow query:', err.message);
+      logger.error('Failed to log slow query:', err.message);
     }
   }
 

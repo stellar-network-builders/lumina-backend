@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const logger = require("../utils/logger");
 
 /**
  * SEP-10 JWT Authentication Middleware
@@ -217,7 +218,7 @@ class SEP10AuthMiddleware {
 
         next();
       } catch (error) {
-        console.error("SEP-10 authentication error:", error);
+        logger.error("SEP-10 authentication error:", error);
         return res.status(500).json({
           success: false,
           error: "authentication_error",

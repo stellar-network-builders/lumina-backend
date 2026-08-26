@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { sequelize } = require('../database/connection');
 const { IndexerState, ClaimsHistory, SubSchedule } = require('../models');
 const { Op } = require('sequelize');
@@ -15,7 +16,7 @@ class StellarIngestionService {
       }
       return 0; // Default to 0 if no state exists
     } catch (error) {
-      console.error('Error fetching last ingested ledger:', error);
+      logger.error('Error fetching last ingested ledger:', error);
       throw error;
     }
   }
@@ -39,7 +40,7 @@ class StellarIngestionService {
       
       return sequence;
     } catch (error) {
-      console.error('Error updating last ingested ledger:', error);
+      logger.error('Error updating last ingested ledger:', error);
       throw error;
     }
   }
@@ -53,7 +54,7 @@ class StellarIngestionService {
     const t = await sequelize.transaction();
 
     try {
-      console.log(`Starting rollback to ledger ${targetSequence}...`);
+      logger.info(`Starting rollback to ledger ${targetSequence}...`);
 
       // 1. Delete ClaimsHistory records > targetSequence
       const deletedClaims = await ClaimsHistory.destroy({
@@ -64,7 +65,7 @@ class StellarIngestionService {
         },
         transaction: t
       });
-      console.log(`Rolled back ${deletedClaims} claims.`);
+      logger.info(`Rolled back ${deletedClaims} claims.`);
 
       // 2. Delete SubSchedule records (top-ups) > targetSequence
       const deletedSchedules = await SubSchedule.destroy({
@@ -75,13 +76,13 @@ class StellarIngestionService {
         },
         transaction: t
       });
-      console.log(`Rolled back ${deletedSchedules} sub-schedules.`);
+      logger.info(`Rolled back ${deletedSchedules} sub-schedules.`);
 
       // 3. Update IndexerState
       await this.updateLastIngestedLedger(targetSequence, t);
 
       await t.commit();
-      console.log(`Rollback complete. New last ingested ledger: ${targetSequence}`);
+      logger.info(`Rollback complete. New last ingested ledger: ${targetSequence}`);
       
       return {
         success: true,
@@ -91,7 +92,7 @@ class StellarIngestionService {
       };
     } catch (error) {
       await t.rollback();
-      console.error('Rollback failed:', error);
+      logger.error('Rollback failed:', error);
       throw error;
     }
   }

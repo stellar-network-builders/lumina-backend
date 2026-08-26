@@ -1,5 +1,6 @@
 'use strict';
 
+const logger = require('../utils/logger');
 const { LoyaltyBadge, Beneficiary, Vault } = require('../models');
 const { sequelize } = require('../database/connection');
 const StellarSdk = require('stellar-sdk');
@@ -77,7 +78,7 @@ class BeneficiaryLoyaltyBadgeService {
       };
 
     } catch (error) {
-      console.error('Error starting loyalty badge monitoring:', error);
+      logger.error('Error starting loyalty badge monitoring:', error);
       throw error;
     }
   }
@@ -93,7 +94,7 @@ class BeneficiaryLoyaltyBadgeService {
       const nativeBalance = account.balances.find(b => b.asset_type === 'native');
       return nativeBalance ? parseFloat(nativeBalance.balance) : 0;
     } catch (error) {
-      console.error(`Error fetching balance for ${walletAddress}:`, error);
+      logger.error(`Error fetching balance for ${walletAddress}:`, error);
       return 0;
     }
   }
@@ -175,7 +176,7 @@ class BeneficiaryLoyaltyBadgeService {
       return results;
 
     } catch (error) {
-      console.error('Error checking retention periods:', error);
+      logger.error('Error checking retention periods:', error);
       throw error;
     }
   }
@@ -240,7 +241,7 @@ class BeneficiaryLoyaltyBadgeService {
       };
 
     } catch (error) {
-      console.error('Error awarding Diamond Hands badge:', error);
+      logger.error('Error awarding Diamond Hands badge:', error);
       throw error;
     }
   }
@@ -256,12 +257,12 @@ class BeneficiaryLoyaltyBadgeService {
       // For now, return true if Discord webhook is configured
       if (process.env.DISCORD_WEBHOOK_URL) {
         // TODO: Implement Discord API integration
-        console.log(`Discord role granted to ${beneficiary.address}`);
+        logger.info(`Discord role granted to ${beneficiary.address}`);
         return true;
       }
       return false;
     } catch (error) {
-      console.error('Error granting Discord role:', error);
+      logger.error('Error granting Discord role:', error);
       return false;
     }
   }
@@ -275,10 +276,10 @@ class BeneficiaryLoyaltyBadgeService {
     try {
       // This would update beneficiary's priority access status
       // For now, just log the action
-      console.log(`Priority access granted to ${beneficiary.address}`);
+      logger.info(`Priority access granted to ${beneficiary.address}`);
       return true;
     } catch (error) {
-      console.error('Error granting priority access:', error);
+      logger.error('Error granting priority access:', error);
       return false;
     }
   }
@@ -293,10 +294,10 @@ class BeneficiaryLoyaltyBadgeService {
       // This would integrate with NFT minting service
       // For now, return a mock metadata URI
       const metadataUri = `https://metadata.example.com/badges/diamond-hands/${beneficiary.id}`;
-      console.log(`NFT badge minted for ${beneficiary.address}: ${metadataUri}`);
+      logger.info(`NFT badge minted for ${beneficiary.address}: ${metadataUri}`);
       return metadataUri;
     } catch (error) {
-      console.error('Error minting NFT badge:', error);
+      logger.error('Error minting NFT badge:', error);
       return null;
     }
   }
@@ -316,7 +317,7 @@ class BeneficiaryLoyaltyBadgeService {
 
       return badges;
     } catch (error) {
-      console.error('Error fetching beneficiary badges:', error);
+      logger.error('Error fetching beneficiary badges:', error);
       throw error;
     }
   }
@@ -338,7 +339,7 @@ class BeneficiaryLoyaltyBadgeService {
 
       return holders;
     } catch (error) {
-      console.error('Error fetching Diamond Hands holders:', error);
+      logger.error('Error fetching Diamond Hands holders:', error);
       throw error;
     }
   }
@@ -368,7 +369,7 @@ class BeneficiaryLoyaltyBadgeService {
       };
 
     } catch (error) {
-      console.error('Error fetching monitoring statistics:', error);
+      logger.error('Error fetching monitoring statistics:', error);
       throw error;
     }
   }

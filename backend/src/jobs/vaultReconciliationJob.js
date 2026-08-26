@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const cron = require('node-cron');
 const { Vault } = require('../models');
 const { sequelize } = require('../database/connection');
@@ -19,39 +20,39 @@ class VaultReconciliationJob {
   }
 
   start() {
-    console.log('Initializing Vault Reconciliation Job...');
+    logger.info('Initializing Vault Reconciliation Job...');
     cron.schedule(this.cronSchedule, async () => {
-      console.log('Running Vault Reconciliation Job...');
+      logger.info('Running Vault Reconciliation Job...');
       try {
         await this.reconcileVaults();
       } catch (error) {
-        console.error('Error running Vault Reconciliation Job:', error);
+        logger.error('Error running Vault Reconciliation Job:', error);
       }
     });
   }
 
   async reconcileVaults() {
-    console.log('Starting vault reconciliation process...');
+    logger.info('Starting vault reconciliation process...');
     
     try {
       // Get on-chain vault count from contract
       const onChainVaultCount = await this.getOnChainVaultCount();
-      console.log(`On-chain vault count: ${onChainVaultCount}`);
+      logger.info(`On-chain vault count: ${onChainVaultCount}`);
 
       // Get database vault count
       const dbVaultCount = await this.getDatabaseVaultCount();
-      console.log(`Database vault count: ${dbVaultCount}`);
+      logger.info(`Database vault count: ${dbVaultCount}`);
 
       // Compare counts
       if (onChainVaultCount !== dbVaultCount) {
-        console.warn(`Vault count mismatch detected! On-chain: ${onChainVaultCount}, DB: ${dbVaultCount}`);
+        logger.warn(`Vault count mismatch detected! On-chain: ${onChainVaultCount}, DB: ${dbVaultCount}`);
         await this.triggerBackfill(onChainVaultCount, dbVaultCount);
       } else {
-        console.log('Vault counts match. No reconciliation needed.');
+        logger.info('Vault counts match. No reconciliation needed.');
       }
 
     } catch (error) {
-      console.error('Error during vault reconciliation:', error);
+      logger.error('Error during vault reconciliation:', error);
       throw error;
     }
   }
@@ -62,7 +63,7 @@ class VaultReconciliationJob {
       // In a real implementation, you would use the Stellar SDK to query the contract
       // for the total_vault_count function or similar
       
-      console.log(`Querying contract ${this.contractAddress} for total vault count...`);
+      logger.info(`Querying contract ${this.contractAddress} for total vault count...`);
       
       // Example implementation using Stellar SDK (commented out as SDK usage needs to be verified)
       /*
@@ -87,11 +88,11 @@ class VaultReconciliationJob {
       const response = await executeRpcWithRetry(rpcCall, 'getOnChainVaultCount');
       return parseInt(response.data.count, 10);
     } catch (error) {
-      console.error('Error fetching on-chain vault count:', error);
+      logger.error('Error fetching on-chain vault count:', error);
       
       // Fallback: try to estimate from existing data or throw
       if (error.response?.status === 404) {
-        console.warn('Contract endpoint not found, using fallback method');
+        logger.warn('Contract endpoint not found, using fallback method');
         // You might need to implement a different approach here
         throw new Error('Unable to fetch on-chain vault count: contract endpoint not available');
       }
@@ -105,13 +106,13 @@ class VaultReconciliationJob {
       const count = await Vault.count();
       return count;
     } catch (error) {
-      console.error('Error fetching database vault count:', error);
+      logger.error('Error fetching database vault count:', error);
       throw error;
     }
   }
 
   async triggerBackfill(onChainCount, dbCount) {
-    console.log(`Triggering backfill job. On-chain: ${onChainCount}, DB: ${dbCount}`);
+    logger.info(`Triggering backfill job. On-chain: ${onChainCount}, DB: ${dbCount}`);
     
     try {
       // Log the reconciliation event
@@ -122,7 +123,7 @@ class VaultReconciliationJob {
       await this.performBackfill();
       
     } catch (error) {
-      console.error('Error during backfill trigger:', error);
+      logger.error('Error during backfill trigger:', error);
       throw error;
     }
   }
@@ -139,18 +140,18 @@ class VaultReconciliationJob {
         status: 'backfill_triggered'
       };
       
-      console.log('Reconciliation log:', JSON.stringify(logEntry, null, 2));
+      logger.info('Reconciliation log:', JSON.stringify(logEntry, null, 2));
       
       // TODO: Store in database if needed
       // await ReconciliationLog.create(logEntry);
       
     } catch (error) {
-      console.error('Error logging reconciliation event:', error);
+      logger.error('Error logging reconciliation event:', error);
     }
   }
 
   async performBackfill() {
-    console.log('Starting backfill process...');
+    logger.info('Starting backfill process...');
     
     try {
       // This is where you would implement the actual backfill logic
@@ -163,7 +164,7 @@ class VaultReconciliationJob {
       const missingVaults = await this.findMissingVaults();
       
       if (missingVaults.length > 0) {
-        console.log(`Found ${missingVaults.length} missing vaults. Starting backfill...`);
+        logger.info(`Found ${missingVaults.length} missing vaults. Starting backfill...`);
         
         for (const vaultData of missingVaults) {
           try {
@@ -177,19 +178,19 @@ class VaultReconciliationJob {
               updated_at: new Date()
             });
             
-            console.log(`Backfilled vault: ${vaultData.address}`);
+            logger.info(`Backfilled vault: ${vaultData.address}`);
           } catch (createError) {
-            console.error(`Error backfilling vault ${vaultData.address}:`, createError);
+            logger.error(`Error backfilling vault ${vaultData.address}:`, createError);
           }
         }
         
-        console.log('Backfill process completed.');
+        logger.info('Backfill process completed.');
       } else {
-        console.log('No missing vaults found.');
+        logger.info('No missing vaults found.');
       }
       
     } catch (error) {
-      console.error('Error during backfill process:', error);
+      logger.error('Error during backfill process:', error);
       throw error;
     }
   }
@@ -202,7 +203,7 @@ class VaultReconciliationJob {
     // 3. Return missing vaults
     
     try {
-      console.log('Searching for missing vaults...');
+      logger.info('Searching for missing vaults...');
       
       // Placeholder: fetch from contract API
       const rpcCall = () =>
@@ -220,24 +221,24 @@ class VaultReconciliationJob {
       
       const missingVaults = onChainVaults.filter(vault => !dbVaultAddresses.has(vault.address));
       
-      console.log(`Found ${missingVaults.length} missing vaults out of ${onChainVaults.length} total on-chain vaults`);
+      logger.info(`Found ${missingVaults.length} missing vaults out of ${onChainVaults.length} total on-chain vaults`);
       
       return missingVaults;
       
     } catch (error) {
-      console.error('Error finding missing vaults:', error);
+      logger.error('Error finding missing vaults:', error);
       throw error;
     }
   }
 
   // Manual trigger method for testing or emergency reconciliation
   async runManually() {
-    console.log('Manually triggering vault reconciliation...');
+    logger.info('Manually triggering vault reconciliation...');
     try {
       await this.reconcileVaults();
-      console.log('Manual reconciliation completed successfully.');
+      logger.info('Manual reconciliation completed successfully.');
     } catch (error) {
-      console.error('Manual reconciliation failed:', error);
+      logger.error('Manual reconciliation failed:', error);
       throw error;
     }
   }
@@ -249,13 +250,13 @@ class VaultReconciliationJob {
     const EPSILON = 0.0000001;
 
     if (drift > EPSILON) {
-      console.warn(`[PRECISION MONITOR] Drift detected for vault ${vault.address}: ${drift}`);
+      logger.warn(`[PRECISION MONITOR] Drift detected for vault ${vault.address}: ${drift}`);
       await this.logPrecisionError(vault.address, dbAmount, expectedAmount, drift);
     }
   }
 
   async logPrecisionError(address, dbVal, chainVal, drift) {
-    console.error(JSON.stringify({
+    logger.error(JSON.stringify({
       event: 'ROUNDING_ERROR_DETECTED',
       address,
       database_value: dbVal,

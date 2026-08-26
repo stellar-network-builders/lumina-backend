@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { Sequelize } = require('sequelize');
 const secretsService = require('../services/secretsService');
 const { buildPoolOptions, buildTimeoutDialectOptions } = require('./poolConfig');
@@ -51,9 +52,9 @@ const initializeDatabase = async () => {
         }
       );
 
-      console.log('Database connection initialized with dynamic credentials and tuned pool', buildPoolOptions());
+      logger.info('Database connection initialized with dynamic credentials and tuned pool', buildPoolOptions());
     } catch (error) {
-      console.error('Failed to initialize database with dynamic credentials, falling back to environment variables:', error);
+      logger.error('Failed to initialize database with dynamic credentials, falling back to environment variables:', error);
       
       // Fallback to environment variables if secrets service fails
       sequelize = new Sequelize(
@@ -135,7 +136,7 @@ const checkDatabaseHealth = async () => {
     await sequelize.authenticate();
     return true;
   } catch (error) {
-    console.error('Database health check failed:', error.message);
+    logger.error('Database health check failed:', error.message);
     return false;
   }
 };

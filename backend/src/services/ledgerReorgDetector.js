@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { sequelize } = require('../database/connection');
 const { SorobanEvent, IndexerState, ClaimsHistory, SubSchedule } = require('../models');
 const { Op } = require('sequelize');
@@ -21,11 +22,11 @@ class LedgerReorgDetector {
    */
   async start() {
     if (this.isRunning) {
-      console.warn('Ledger Reorg Detector is already running');
+      logger.warn('Ledger Reorg Detector is already running');
       return;
     }
 
-    console.log('Starting Ledger Reorg Detector...');
+    logger.info('Starting Ledger Reorg Detector...');
     this.isRunning = true;
     this.lastCheckTime = Date.now();
 
@@ -35,14 +36,14 @@ class LedgerReorgDetector {
     // Schedule regular checks
     this.intervalId = setInterval(() => {
       this.performReorgCheck().catch(error => {
-        console.error('Error in reorg detection check:', error);
+        logger.error('Error in reorg detection check:', error);
         Sentry.captureException(error, {
           tags: { service: this.serviceName, operation: 'scheduled_check' }
         });
       });
     }, this.checkInterval);
 
-    console.log(`Ledger Reorg Detector started - checking every ${this.checkInterval/1000} seconds`);
+    logger.info(`Ledger Reorg Detector started - checking every ${this.checkInterval/1000} seconds`);
   }
 
   /**
@@ -50,11 +51,11 @@ class LedgerReorgDetector {
    */
   async stop() {
     if (!this.isRunning) {
-      console.warn('Ledger Reorg Detector is not running');
+      logger.warn('Ledger Reorg Detector is not running');
       return;
     }
 
-    console.log('Stopping Ledger Reorg Detector...');
+    logger.info('Stopping Ledger Reorg Detector...');
     this.isRunning = false;
 
     if (this.intervalId) {
@@ -62,7 +63,7 @@ class LedgerReorgDetector {
       this.intervalId = null;
     }
 
-    console.log('Ledger Reorg Detector stopped');
+    logger.info('Ledger Reorg Detector stopped');
   }
 
   /**
@@ -75,7 +76,7 @@ class LedgerReorgDetector {
     const startTime = Date.now();
 
     try {
-      console.log(`[${checkId}] Starting reorg detection check...`);
+      logger.info(`[${checkId}] Starting reorg detection check...`);
 
       // Get current network state
       const networkState = await this.getNetworkState();
@@ -95,12 +96,12 @@ class LedgerReorgDetector {
       await this.updateLedgerHashCache(networkState);
 
       const duration = Date.now() - startTime;
-      console.log(`[${checkId}] Reorg check completed in ${duration}ms - found ${issues.length} issues`);
+      logger.info(`[${checkId}] Reorg check completed in ${duration}ms - found ${issues.length} issues`);
 
       return { checkId, issues, duration };
 
     } catch (error) {
-      console.error(`[${checkId}] Critical error in reorg check:`, error);
+      logger.error(`[${checkId}] Critical error in reorg check:`, error);
       Sentry.captureException(error, {
         tags: { service: this.serviceName, operation: 'reorg_check' },
         extra: { check_id: checkId }
@@ -149,7 +150,7 @@ class LedgerReorgDetector {
         hashes.set(seq, ledger.hash);
       } catch (error) {
         // Some ledgers might not be available, continue with what we have
-        console.warn(`Could not fetch ledger ${seq}: ${error.message}`);
+        logger.warn(`Could not fetch ledger ${seq}: ${error.message}`);
       }
     }
 
@@ -338,13 +339,13 @@ class LedgerReorgDetector {
    * Handle detected issues
    */
   async handleDetectedIssues(issues, checkId) {
-    console.log(`[${checkId}] Handling ${issues.length} detected issues...`);
+    logger.info(`[${checkId}] Handling ${issues.length} detected issues...`);
 
     for (const issue of issues) {
       try {
         await this.handleIssue(issue, checkId);
       } catch (error) {
-        console.error(`[${checkId}] Failed to handle issue ${issue.type}:`, error);
+        logger.error(`[${checkId}] Failed to handle issue ${issue.type}:`, error);
         Sentry.captureException(error, {
           tags: { 
             service: this.serviceName, 
@@ -361,7 +362,7 @@ class LedgerReorgDetector {
    * Handle individual issue based on type and severity
    */
   async handleIssue(issue, checkId) {
-    console.log(`[${checkId}] Handling ${issue.type} (${issue.severity}): ${issue.description}`);
+    logger.info(`[${checkId}] Handling ${issue.type} (${issue.severity}): ${issue.description}`);
 
     switch (issue.type) {
       case 'ROLLBACK_DETECTED':
@@ -386,7 +387,7 @@ class LedgerReorgDetector {
         break;
       
       default:
-        console.warn(`[${checkId}] Unknown issue type: ${issue.type}`);
+        logger.warn(`[${checkId}] Unknown issue type: ${issue.type}`);
     }
   }
 
@@ -396,7 +397,7 @@ class LedgerReorgDetector {
   async handleRollback(issue, checkId) {
     const { expectedSequence, actualSequence, gap } = issue.data;
     
-    console.log(`[${checkId}] Rollback detected: rolling back ${gap} ledgers to ${actualSequence}`);
+    logger.info(`[${checkId}] Rollback detected: rolling back ${gap} ledgers to ${actualSequence}`);
     
     // Use existing rollback mechanism
     const stellarIngestionService = require('./stellarIngestionService');
@@ -408,7 +409,7 @@ class LedgerReorgDetector {
     // Clear ledger hash cache beyond rollback point
     this.clearLedgerHashCache(actualSequence);
     
-    console.log(`[${checkId}] Rollback completed:`, rollbackResult);
+    logger.info(`[${checkId}] Rollback completed:`, rollbackResult);
     
     // Send alert
     await this.sendReorgAlert(issue, checkId, rollbackResult);
@@ -420,7 +421,7 @@ class LedgerReorgDetector {
   async handleFork(issue, checkId) {
     const { sequence, cachedHash, networkHash } = issue.data;
     
-    console.log(`[${checkId}] Fork detected at ledger ${sequence}, rolling back to safe point`);
+    logger.info(`[${checkId}] Fork detected at ledger ${sequence}, rolling back to safe point`);
     
     // Roll back to a safe point before the fork
     const safeSequence = Math.max(1, sequence - this.finalityThreshold);
@@ -431,7 +432,7 @@ class LedgerReorgDetector {
     await this.rollbackSorobanEvents(safeSequence);
     this.clearLedgerHashCache(safeSequence);
     
-    console.log(`[${checkId}] Fork handling completed:`, rollbackResult);
+    logger.info(`[${checkId}] Fork handling completed:`, rollbackResult);
     
     // Send critical alert
     await this.sendCriticalAlert(issue, checkId, rollbackResult);
@@ -445,7 +446,7 @@ class LedgerReorgDetector {
     
     if (gap > this.maxReorgDepth) {
       // Gap is too large, treat as potential fork
-      console.log(`[${checkId}] Large gap (${gap}) detected, treating as potential fork`);
+      logger.info(`[${checkId}] Large gap (${gap}) detected, treating as potential fork`);
       await this.handleFork({
         type: 'LARGE_GAP_TREATED_AS_FORK',
         severity: 'HIGH',
@@ -454,7 +455,7 @@ class LedgerReorgDetector {
       }, checkId);
     } else {
       // Small gap, might be temporary network issue
-      console.log(`[${checkId}] Small gap detected, monitoring...`);
+      logger.info(`[${checkId}] Small gap detected, monitoring...`);
       this.consecutiveGaps++;
       
       if (this.consecutiveGaps >= 3) {
@@ -468,7 +469,7 @@ class LedgerReorgDetector {
    * Handle sequence inconsistency
    */
   async handleSequenceInconsistency(issue, checkId) {
-    console.log(`[${checkId}] Sequence inconsistency detected, investigating...`);
+    logger.info(`[${checkId}] Sequence inconsistency detected, investigating...`);
     
     // For now, log and alert - could be enhanced with specific handling
     await this.sendSequenceAlert(issue, checkId);
@@ -480,7 +481,7 @@ class LedgerReorgDetector {
   async handleOrphanedEvents(issue, checkId) {
     const { events } = issue.data;
     
-    console.log(`[${checkId}] Cleaning up ${events.length} orphaned events...`);
+    logger.info(`[${checkId}] Cleaning up ${events.length} orphaned events...`);
     
     // Delete orphaned events
     const eventIds = events.map(e => e.id);
@@ -490,7 +491,7 @@ class LedgerReorgDetector {
       }
     });
     
-    console.log(`[${checkId}] Deleted ${deletedCount} orphaned events`);
+    logger.info(`[${checkId}] Deleted ${deletedCount} orphaned events`);
     
     await this.sendOrphanedEventsAlert(issue, checkId, deletedCount);
   }
@@ -507,7 +508,7 @@ class LedgerReorgDetector {
       }
     });
     
-    console.log(`Rolled back ${deletedCount} Soroban events to ledger ${targetSequence}`);
+    logger.info(`Rolled back ${deletedCount} Soroban events to ledger ${targetSequence}`);
     return deletedCount;
   }
 
@@ -551,7 +552,7 @@ class LedgerReorgDetector {
       }
       return 0;
     } catch (error) {
-      console.error('Error fetching last processed ledger:', error);
+      logger.error('Error fetching last processed ledger:', error);
       throw error;
     }
   }
@@ -573,7 +574,7 @@ class LedgerReorgDetector {
         await state.save();
       }
     } catch (error) {
-      console.error('Error updating last processed ledger:', error);
+      logger.error('Error updating last processed ledger:', error);
       throw error;
     }
   }

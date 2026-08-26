@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const BeneficiaryLoyaltyBadgeService = require('../services/beneficiaryLoyaltyBadgeService');
 const authService = require('../services/authService');
+const logger = require('../utils/logger');
 
 const loyaltyBadgeService = new BeneficiaryLoyaltyBadgeService();
 
@@ -25,7 +26,7 @@ router.post(
       
       res.json(result);
     } catch (error) {
-      console.error('Error starting loyalty badge monitoring:', error);
+      logger.error('Error starting loyalty badge monitoring:', error);
       res.status(500).json({
         success: false,
         message: error.message
@@ -49,7 +50,7 @@ router.post(
         data: result
       });
     } catch (error) {
-      console.error('Error checking retention periods:', error);
+      logger.error('Error checking retention periods:', error);
       res.status(500).json({
         success: false,
         message: error.message
@@ -73,7 +74,7 @@ router.get(
         data: badges
       });
     } catch (error) {
-      console.error('Error fetching beneficiary badges:', error);
+      logger.error('Error fetching beneficiary badges:', error);
       res.status(500).json({
         success: false,
         message: error.message
@@ -96,7 +97,7 @@ router.get(
         data: holders
       });
     } catch (error) {
-      console.error('Error fetching Diamond Hands holders:', error);
+      logger.error('Error fetching Diamond Hands holders:', error);
       res.status(500).json({
         success: false,
         message: error.message
@@ -119,7 +120,7 @@ router.get(
         data: stats
       });
     } catch (error) {
-      console.error('Error fetching monitoring statistics:', error);
+      logger.error('Error fetching monitoring statistics:', error);
       res.status(500).json({
         success: false,
         message: error.message
@@ -140,7 +141,7 @@ router.post(
       
       res.json(result);
     } catch (error) {
-      console.error('Error awarding badge:', error);
+      logger.error('Error awarding badge:', error);
       res.status(500).json({
         success: false,
         message: error.message
@@ -167,7 +168,7 @@ router.get(
         }
       });
     } catch (error) {
-      console.error('Error fetching wallet balance:', error);
+      logger.error('Error fetching wallet balance:', error);
       res.status(500).json({
         success: false,
         message: error.message

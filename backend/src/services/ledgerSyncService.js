@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { Vault, Beneficiary } = require('../models');
 const Sentry = require('@sentry/node');
 const slackWebhookService = require('./slackWebhookService');
@@ -20,11 +21,11 @@ class LedgerSyncService {
    */
   start() {
     if (this.isRunning) {
-      console.warn('Ledger Sync Service is already running');
+      logger.warn('Ledger Sync Service is already running');
       return;
     }
 
-    console.log('🔍 Starting Ledger Sync Consistency Checker...');
+    logger.info('🔍 Starting Ledger Sync Consistency Checker...');
     this.isRunning = true;
     
     // Run initial check immediately
@@ -35,7 +36,7 @@ class LedgerSyncService {
       this.performConsistencyCheck();
     }, this.checkInterval);
 
-    console.log(`✅ Ledger Sync Checker started - checking every ${this.checkInterval/1000} seconds`);
+    logger.info(`✅ Ledger Sync Checker started - checking every ${this.checkInterval/1000} seconds`);
   }
 
   /**
@@ -43,11 +44,11 @@ class LedgerSyncService {
    */
   stop() {
     if (!this.isRunning) {
-      console.warn('Ledger Sync Service is not running');
+      logger.warn('Ledger Sync Service is not running');
       return;
     }
 
-    console.log('🛑 Stopping Ledger Sync Consistency Checker...');
+    logger.info('🛑 Stopping Ledger Sync Consistency Checker...');
     this.isRunning = false;
     
     if (this.intervalId) {
@@ -55,7 +56,7 @@ class LedgerSyncService {
       this.intervalId = null;
     }
 
-    console.log('✅ Ledger Sync Checker stopped');
+    logger.info('✅ Ledger Sync Checker stopped');
   }
 
   /**
@@ -68,7 +69,7 @@ class LedgerSyncService {
     const checkId = `check_${startTime}`;
     
     try {
-      console.log(`🔍 [${checkId}] Starting consistency check...`);
+      logger.info(`🔍 [${checkId}] Starting consistency check...`);
       
       // Get all active vaults
       const vaults = await Vault.findAll({
@@ -78,7 +79,7 @@ class LedgerSyncService {
         attributes: ['id', 'address', 'name', 'token_address', 'total_amount']
       });
 
-      console.log(`📊 [${checkId}] Checking ${vaults.length} vaults`);
+      logger.info(`📊 [${checkId}] Checking ${vaults.length} vaults`);
 
       const results = {
         total: vaults.length,
@@ -113,7 +114,7 @@ class LedgerSyncService {
             }
           } else {
             results.errors++;
-            console.error(`❌ [${checkId}] Error checking vault ${chunk[index].address}:`, result.reason);
+            logger.error(`❌ [${checkId}] Error checking vault ${chunk[index].address}:`, result.reason);
             Sentry.captureException(result.reason, {
               tags: { service: 'ledger-sync', vault_address: chunk[index].address },
               extra: { check_id: checkId }
@@ -123,7 +124,7 @@ class LedgerSyncService {
       }
 
       const duration = Date.now() - startTime;
-      console.log(`✅ [${checkId}] Consistency check completed in ${duration}ms:`, {
+      logger.info(`✅ [${checkId}] Consistency check completed in ${duration}ms:`, {
         total: results.total,
         consistent: results.consistent,
         inconsistent: results.inconsistent,
@@ -142,7 +143,7 @@ class LedgerSyncService {
       return results;
 
     } catch (error) {
-      console.error(`❌ [${checkId}] Critical error in consistency check:`, error);
+      logger.error(`❌ [${checkId}] Critical error in consistency check:`, error);
       Sentry.captureException(error, {
         tags: { service: 'ledger-sync' },
         extra: { check_id: checkId }
@@ -211,7 +212,7 @@ class LedgerSyncService {
       };
 
     } catch (error) {
-      console.error(`❌ [${checkId}] Error checking vault ${vaultAddress}:`, error);
+      logger.error(`❌ [${checkId}] Error checking vault ${vaultAddress}:`, error);
       throw error;
     }
   }
@@ -257,7 +258,7 @@ class LedgerSyncService {
 
     } catch (error) {
       if (retryCount < this.maxRetries) {
-        console.warn(`⚠️ Retry ${retryCount + 1}/${this.maxRetries} for vault ${vaultAddress}`);
+        logger.warn(`⚠️ Retry ${retryCount + 1}/${this.maxRetries} for vault ${vaultAddress}`);
         await this.delay(1000 * (retryCount + 1)); // Exponential backoff
         return this.getBlockchainBalance(vaultAddress, tokenAddress, retryCount + 1);
       }
@@ -284,14 +285,14 @@ class LedgerSyncService {
       if (result && result.xdr) {
         // Parse XDR data - would need proper XDR library
         // For now, return 0 as placeholder
-        console.warn('XDR parsing not implemented, returning 0');
+        logger.warn('XDR parsing not implemented, returning 0');
         return 0;
       }
       
       throw new Error('Unable to parse balance from RPC response');
       
     } catch (error) {
-      console.error('Error parsing balance:', error);
+      logger.error('Error parsing balance:', error);
       throw new Error(`Balance parsing failed: ${error.message}`);
     }
   }
@@ -303,7 +304,7 @@ class LedgerSyncService {
     const vaultAddress = vault.address;
     const vaultId = vault.id;
     
-    console.error(`🚨 [${checkId}] INCONSISTENCY DETECTED - Vault: ${vaultAddress}, Drift: ${drift}`);
+    logger.error(`🚨 [${checkId}] INCONSISTENCY DETECTED - Vault: ${vaultAddress}, Drift: ${drift}`);
     
     // Track inconsistency history
     const history = this.inconsistencyHistory.get(vaultAddress) || [];
@@ -378,13 +379,13 @@ class LedgerSyncService {
         pausedAt: Date.now()
       }, 86400); // 24 hours
       
-      console.log(`🔒 Vault ${vaultAddress} PAUSED: ${reason}`);
+      logger.info(`🔒 Vault ${vaultAddress} PAUSED: ${reason}`);
       
       // Update vault status in database if needed
       // await Vault.update({ status: 'paused' }, { where: { address: vaultAddress } });
       
     } catch (error) {
-      console.error(`❌ Failed to pause vault ${vaultAddress}:`, error);
+      logger.error(`❌ Failed to pause vault ${vaultAddress}:`, error);
       Sentry.captureException(error, {
         tags: { service: 'ledger-sync', action: 'pause_vault' },
         extra: { vault_address: vaultAddress, reason }
@@ -403,13 +404,13 @@ class LedgerSyncService {
       // Remove from cache
       await cacheService.del(`paused_vault:${vaultAddress}`);
       
-      console.log(`✅ Vault ${vaultAddress} UNPAUSED: ${reason}`);
+      logger.info(`✅ Vault ${vaultAddress} UNPAUSED: ${reason}`);
       
       // Update vault status in database if needed
       // await Vault.update({ status: 'active' }, { where: { address: vaultAddress } });
       
     } catch (error) {
-      console.error(`❌ Failed to unpause vault ${vaultAddress}:`, error);
+      logger.error(`❌ Failed to unpause vault ${vaultAddress}:`, error);
       Sentry.captureException(error, {
         tags: { service: 'ledger-sync', action: 'unpause_vault' },
         extra: { vault_address: vaultAddress, reason }
@@ -438,10 +439,10 @@ class LedgerSyncService {
     try {
       // This would need to scan cache for paused_vault:* keys
       // For now, we'll use a simple approach
-      console.log('🔄 Loading paused vaults from cache...');
+      logger.info('🔄 Loading paused vaults from cache...');
       // Implementation would depend on cache service capabilities
     } catch (error) {
-      console.error('❌ Failed to load paused vaults:', error);
+      logger.error('❌ Failed to load paused vaults:', error);
     }
   }
 
@@ -477,10 +478,10 @@ This prevents "Phantom Liquidity" exposure to investors.`;
         priority: 'high'
       });
 
-      console.log(`📢 Inconsistency alert sent for vault ${vault.address}`);
+      logger.info(`📢 Inconsistency alert sent for vault ${vault.address}`);
       
     } catch (error) {
-      console.error('❌ Failed to send inconsistency alert:', error);
+      logger.error('❌ Failed to send inconsistency alert:', error);
     }
   }
 
@@ -510,7 +511,7 @@ ${results.errors > 0 ? `❌ ${results.errors} vaults had check errors.` : ''}`;
       });
 
     } catch (error) {
-      console.error('❌ Failed to send summary alert:', error);
+      logger.error('❌ Failed to send summary alert:', error);
     }
   }
 
@@ -536,7 +537,7 @@ ${results.errors > 0 ? `❌ ${results.errors} vaults had check errors.` : ''}`;
       });
 
     } catch (alertError) {
-      console.error('❌ Failed to send critical alert:', alertError);
+      logger.error('❌ Failed to send critical alert:', alertError);
     }
   }
 

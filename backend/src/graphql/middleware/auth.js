@@ -1,4 +1,5 @@
 // Utility to check if admin_address belongs to org_id
+const logger = require('../utils/logger');
 const isAdminOfOrg = async (adminAddress, orgId) => {
   if (!adminAddress || !orgId) return false;
   try {
@@ -8,7 +9,7 @@ const isAdminOfOrg = async (adminAddress, orgId) => {
     });
     return !!org;
   } catch (err) {
-    console.error('Error in isAdminOfOrg:', err);
+    logger.error('Error in isAdminOfOrg:', err);
     return false;
   }
 };
@@ -119,7 +120,7 @@ const canAccessVault = async (userAddress, vaultAddress) => {
 
     return { canAccess: false, role: null };
   } catch (error) {
-    console.error('Error checking vault access:', error);
+    logger.error('Error checking vault access:', error);
     return { canAccess: false, role: null };
   }
 };

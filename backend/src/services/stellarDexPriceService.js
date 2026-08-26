@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const axios = require('axios');
 
 /**
@@ -48,7 +49,7 @@ class StellarDexPriceService {
 
       return priceData;
     } catch (error) {
-      console.error(`Error fetching VWAP for token ${tokenAddress}:`, error.message);
+      logger.error(`Error fetching VWAP for token ${tokenAddress}:`, error.message);
       throw error;
     }
   }
@@ -90,13 +91,13 @@ class StellarDexPriceService {
         return tradeTime >= startTime && tradeTime <= endTime;
       });
     } catch (error) {
-      console.error(`Error fetching trades from Stellar DEX:`, error.message);
+      logger.error(`Error fetching trades from Stellar DEX:`, error.message);
       
       // Fallback: try alternative asset pairing (USDC)
       try {
         return await this.getTokenTradesUSDC(tokenAddress, date);
       } catch (fallbackError) {
-        console.error(`Fallback USDC pairing also failed:`, fallbackError.message);
+        logger.error(`Fallback USDC pairing also failed:`, fallbackError.message);
         throw error;
       }
     }

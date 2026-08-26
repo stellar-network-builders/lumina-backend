@@ -1,6 +1,7 @@
 const express = require('express');
 const { SorobanEvent } = require('../models');
 const { Op } = require('sequelize');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 
@@ -75,7 +76,7 @@ router.get('/', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching Soroban events:', error);
+    logger.error('Error fetching Soroban events:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch events'
@@ -103,7 +104,7 @@ router.get('/:id', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching event:', error);
+    logger.error('Error fetching event:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch event'
@@ -141,7 +142,7 @@ router.get('/service/status', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching service status:', error);
+    logger.error('Error fetching service status:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch service status'
@@ -171,7 +172,7 @@ router.post('/retry-failed', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error retrying failed events:', error);
+    logger.error('Error retrying failed events:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retry events'
@@ -201,7 +202,7 @@ router.post('/contracts/:address', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error adding contract address:', error);
+    logger.error('Error adding contract address:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to add contract address'
@@ -231,7 +232,7 @@ router.delete('/contracts/:address', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error removing contract address:', error);
+    logger.error('Error removing contract address:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to remove contract address'
@@ -275,7 +276,7 @@ router.get('/statistics/by-type', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching event statistics:', error);
+    logger.error('Error fetching event statistics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch statistics'

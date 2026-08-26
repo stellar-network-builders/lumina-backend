@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const SEP12Service = require("../services/sep12.service");
 const { KycStatus } = require("../../models");
 const sep10Auth = require("../../middleware/sep10Auth.middleware");
@@ -83,7 +84,7 @@ class SEP12Controller {
 
       res.json(response);
     } catch (error) {
-      console.error("Error in getCustomer:", error);
+      logger.error("Error in getCustomer:", error);
       res.status(500).json({
         error: "Internal Server Error",
         message: "Failed to retrieve customer information",

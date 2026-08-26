@@ -4,6 +4,7 @@ const hsmGatewayService = require('../services/hsmGatewayService');
 const { authenticateAdmin, hsmSecurityMiddleware, validateHSMOperation } = require('../middleware/auth.middleware');
 const auditLogger = require('../services/auditLogger');
 const rateLimit = require('express-rate-limit');
+const logger = require('../utils/logger');
 
 // Security: Rate limiting for HSM operations
 const hsmRateLimit = rateLimit({
@@ -32,7 +33,7 @@ router.post('/prepare-transaction', authenticateAdmin, hsmSecurityMiddleware, va
       });
     }
 
-    console.log(`🔐 Preparing HSM transaction for proposal ${proposal.id}`);
+    logger.info(`🔐 Preparing HSM transaction for proposal ${proposal.id}`);
     
     const result = await hsmGatewayService.prepareRevocationTransaction(proposal);
     
@@ -54,7 +55,7 @@ router.post('/prepare-transaction', authenticateAdmin, hsmSecurityMiddleware, va
     });
 
   } catch (error) {
-    console.error('❌ Error preparing HSM transaction:', error);
+    logger.error('❌ Error preparing HSM transaction:', error);
     res.status(500).json({
       success: false,
       error: 'Transaction preparation failed',
@@ -78,7 +79,7 @@ router.post('/sign-transaction', authenticateAdmin, hsmSecurityMiddleware, valid
       });
     }
 
-    console.log(`🔐 Signing transaction with HSM for signer ${signerAddress}`);
+    logger.info(`🔐 Signing transaction with HSM for signer ${signerAddress}`);
     
     const result = await hsmGatewayService.signWithHSM(transactionXDR, keyId, signerAddress);
     
@@ -100,7 +101,7 @@ router.post('/sign-transaction', authenticateAdmin, hsmSecurityMiddleware, valid
     });
 
   } catch (error) {
-    console.error('❌ Error signing with HSM:', error);
+    logger.error('❌ Error signing with HSM:', error);
     res.status(500).json({
       success: false,
       error: 'HSM signing failed',
@@ -124,7 +125,7 @@ router.post('/batch-revoke', authenticateAdmin, hsmSecurityMiddleware, validateH
       });
     }
 
-    console.log(`🔐 Executing batch revoke with HSM for proposal ${proposal.id}`);
+    logger.info(`🔐 Executing batch revoke with HSM for proposal ${proposal.id}`);
     
     const result = await hsmGatewayService.executeBatchRevokeWithHSM(proposal, signingKeyIds);
     
@@ -148,7 +149,7 @@ router.post('/batch-revoke', authenticateAdmin, hsmSecurityMiddleware, validateH
     });
 
   } catch (error) {
-    console.error('❌ Error in batch revoke with HSM:', error);
+    logger.error('❌ Error in batch revoke with HSM:', error);
     res.status(500).json({
       success: false,
       error: 'Batch revoke failed',
@@ -172,7 +173,7 @@ router.post('/broadcast-transaction', authenticateAdmin, hsmSecurityMiddleware, 
       });
     }
 
-    console.log('🚀 Broadcasting HSM-signed transaction');
+    logger.info('🚀 Broadcasting HSM-signed transaction');
     
     const result = await hsmGatewayService.broadcastTransaction(signedTransactionXDR);
     
@@ -194,7 +195,7 @@ router.post('/broadcast-transaction', authenticateAdmin, hsmSecurityMiddleware, 
     });
 
   } catch (error) {
-    console.error('❌ Error broadcasting transaction:', error);
+    logger.error('❌ Error broadcasting transaction:', error);
     res.status(500).json({
       success: false,
       error: 'Transaction broadcast failed',
@@ -217,7 +218,7 @@ router.get('/status', authenticateAdmin, hsmSecurityMiddleware, async (req, res)
     });
 
   } catch (error) {
-    console.error('❌ Error getting HSM status:', error);
+    logger.error('❌ Error getting HSM status:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get HSM status',

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const models = require('../../models');
 
 const calculateWithdrawableAmount = async (vault, beneficiary, timestamp = new Date()) => {
@@ -77,7 +78,7 @@ const userResolver = {
 
         return beneficiary;
       } catch (error) {
-        console.error('Error fetching beneficiary:', error);
+        logger.error('Error fetching beneficiary:', error);
         throw new Error(`Failed to fetch beneficiary: ${error.message}`);
       }
     },
@@ -109,7 +110,7 @@ const userResolver = {
 
         return beneficiaries;
       } catch (error) {
-        console.error('Error fetching beneficiaries:', error);
+        logger.error('Error fetching beneficiaries:', error);
         throw new Error(`Failed to fetch beneficiaries: ${error.message}`);
       }
     },
@@ -131,7 +132,7 @@ const userResolver = {
 
         return claims;
       } catch (error) {
-        console.error('Error fetching claims:', error);
+        logger.error('Error fetching claims:', error);
         throw new Error(`Failed to fetch claims: ${error.message}`);
       }
     },
@@ -143,7 +144,7 @@ const userResolver = {
         });
         return claim;
       } catch (error) {
-        console.error('Error fetching claim:', error);
+        logger.error('Error fetching claim:', error);
         throw new Error(`Failed to fetch claim: ${error.message}`);
       }
     },
@@ -176,7 +177,7 @@ const userResolver = {
           periodEnd: endDate
         };
       } catch (error) {
-        console.error('Error calculating realized gains:', error);
+        logger.error('Error calculating realized gains:', error);
         throw new Error(`Failed to calculate realized gains: ${error.message}`);
       }
     }
@@ -224,7 +225,7 @@ const userResolver = {
           nextVestTime: withdrawableInfo.nextVestTime
         };
       } catch (error) {
-        console.error('Error processing withdrawal:', error);
+        logger.error('Error processing withdrawal:', error);
         throw new Error(`Failed to process withdrawal: ${error.message}`);
       }
     },
@@ -242,7 +243,7 @@ const userResolver = {
 
         return claim;
       } catch (error) {
-        console.error('Error processing claim:', error);
+        logger.error('Error processing claim:', error);
         throw new Error(`Failed to process claim: ${error.message}`);
       }
     },
@@ -263,7 +264,7 @@ const userResolver = {
 
         return processedClaims;
       } catch (error) {
-        console.error('Error processing batch claims:', error);
+        logger.error('Error processing batch claims:', error);
         throw new Error(`Failed to process batch claims: ${error.message}`);
       }
     },
@@ -283,7 +284,7 @@ const userResolver = {
         
         return claimsWithoutPrice.length;
       } catch (error) {
-        console.error('Error backfilling prices:', error);
+        logger.error('Error backfilling prices:', error);
         throw new Error(`Failed to backfill prices: ${error.message}`);
       }
     }
@@ -294,7 +295,7 @@ const userResolver = {
       try {
         return await models.Vault.findByPk(beneficiary.vault_id);
       } catch (error) {
-        console.error('Error fetching vault for beneficiary:', error);
+        logger.error('Error fetching vault for beneficiary:', error);
         return null;
       }
     },
@@ -308,7 +309,7 @@ const userResolver = {
 
         return await calculateWithdrawableAmount(vault, beneficiary, withdrawableAt);
       } catch (error) {
-        console.error('Error calculating withdrawable amount:', error);
+        logger.error('Error calculating withdrawable amount:', error);
         throw new Error(`Failed to calculate withdrawable amount: ${error.message}`);
       }
     }

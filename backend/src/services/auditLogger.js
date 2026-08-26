@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const fs = require('fs');
 const path = require('path');
 
@@ -30,7 +31,7 @@ class AuditLogger {
     try {
       fs.appendFileSync(this.websocketLogPath, logEntry);
     } catch (error) {
-      console.error('Failed to write to websocket audit log:', error);
+      logger.error('Failed to write to websocket audit log:', error);
     }
   }
 
@@ -45,7 +46,7 @@ class AuditLogger {
         .filter((line) => line.trim() !== '')
         .reverse();
     } catch (error) {
-      console.error('Failed to read websocket audit log:', error);
+      logger.error('Failed to read websocket audit log:', error);
       return [];
     }
   }
@@ -63,9 +64,9 @@ class AuditLogger {
     
     try {
       fs.appendFileSync(this.logFilePath, logEntry);
-      console.log(`Audit log: ${logEntry.trim()}`);
+      logger.info(`Audit log: ${logEntry.trim()}`);
     } catch (error) {
-      console.error('Failed to write to audit log:', error);
+      logger.error('Failed to write to audit log:', error);
     }
   }
 
@@ -79,9 +80,9 @@ class AuditLogger {
 
     try {
       fs.appendFileSync(this.slowQueryLogPath, logEntry);
-      console.warn(`Slow query (${entry.durationMs}ms) [${entry.operation}]`);
+      logger.warn(`Slow query (${entry.durationMs}ms) [${entry.operation}]`);
     } catch (error) {
-      console.error('Failed to write to slow query log:', error);
+      logger.error('Failed to write to slow query log:', error);
     }
   }
 
@@ -96,7 +97,7 @@ class AuditLogger {
         .filter((line) => line.trim() !== '')
         .reverse();
     } catch (error) {
-      console.error('Failed to read slow query log:', error);
+      logger.error('Failed to read slow query log:', error);
       return [];
     }
   }
@@ -113,7 +114,7 @@ class AuditLogger {
         .filter(line => line.trim() !== '')
         .reverse(); // Most recent first
     } catch (error) {
-      console.error('Failed to read audit log:', error);
+      logger.error('Failed to read audit log:', error);
       return [];
     }
   }

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { 
   ContractUpgradeProposal, 
   ContractUpgradeSignature, 
@@ -532,7 +533,7 @@ class ContractUpgradeService {
 
       return false;
     } catch (error) {
-      console.error('Error checking admin permission:', error);
+      logger.error('Error checking admin permission:', error);
       return false;
     }
   }
@@ -548,7 +549,7 @@ class ContractUpgradeService {
       // For now, return a placeholder
       return 'current_wasm_hash_placeholder';
     } catch (error) {
-      console.error('Error getting current WASM hash:', error);
+      logger.error('Error getting current WASM hash:', error);
       throw new Error('Failed to get current WASM hash');
     }
   }
@@ -563,7 +564,7 @@ class ContractUpgradeService {
       const immutableTerms = await wasmHashVerificationService.getVaultImmutableTerms(vaultAddress);
       return wasmHashVerificationService.calculateImmutableTermsHash(immutableTerms);
     } catch (error) {
-      console.error('Error calculating immutable terms hash:', error);
+      logger.error('Error calculating immutable terms hash:', error);
       throw new Error('Failed to calculate immutable terms hash');
     }
   }
@@ -582,7 +583,7 @@ class ContractUpgradeService {
       // For now, return true as placeholder
       return true;
     } catch (error) {
-      console.error('Error validating signature:', error);
+      logger.error('Error validating signature:', error);
       return false;
     }
   }
@@ -605,7 +606,7 @@ class ContractUpgradeService {
         gas_used: '1000000'
       };
     } catch (error) {
-      console.error('Error executing blockchain upgrade:', error);
+      logger.error('Error executing blockchain upgrade:', error);
       return {
         success: false,
         error: error.message,

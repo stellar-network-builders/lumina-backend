@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { sequelize } = require('../database/connection');
 const { ClaimsHistory, SubSchedule, Vault, IndexerState } = require('../models');
 const { Op } = require('sequelize');
@@ -31,7 +32,7 @@ class BulkInsertService {
     };
 
     try {
-      console.log(`Starting bulk insert of ${claimsData.length} claims...`);
+      logger.info(`Starting bulk insert of ${claimsData.length} claims...`);
       
       // Process in chunks to avoid memory issues and improve performance
       const chunks = this.chunkArray(claimsData, this.chunkSize);
@@ -41,7 +42,7 @@ class BulkInsertService {
         const chunkNumber = i + 1;
         const totalChunks = chunks.length;
         
-        console.log(`Processing chunk ${chunkNumber}/${totalChunks} (${chunk.length} records)...`);
+        logger.info(`Processing chunk ${chunkNumber}/${totalChunks} (${chunk.length} records)...`);
         
         try {
           await this.insertClaimsWithRetry(chunk, chunkNumber);
@@ -49,10 +50,10 @@ class BulkInsertService {
           
           // Log progress
           const progress = ((results.processed / results.total) * 100).toFixed(2);
-          console.log(`Chunk ${chunkNumber} completed. Progress: ${progress}% (${results.processed}/${results.total})`);
+          logger.info(`Chunk ${chunkNumber} completed. Progress: ${progress}% (${results.processed}/${results.total})`);
           
         } catch (chunkError) {
-          console.error(`Error processing chunk ${chunkNumber}:`, chunkError);
+          logger.error(`Error processing chunk ${chunkNumber}:`, chunkError);
           results.errors += chunk.length;
           results.errorDetails.push({
             chunk: chunkNumber,
@@ -78,7 +79,7 @@ class BulkInsertService {
 
       results.duration = Date.now() - startTime;
       
-      console.log(`Bulk insert completed in ${results.duration}ms:`, {
+      logger.info(`Bulk insert completed in ${results.duration}ms:`, {
         total: results.total,
         processed: results.processed,
         errors: results.errors,
@@ -88,7 +89,7 @@ class BulkInsertService {
       return results;
 
     } catch (error) {
-      console.error('Critical error in bulk insert claims:', error);
+      logger.error('Critical error in bulk insert claims:', error);
       Sentry.captureException(error, {
         tags: { service: 'bulk-insert', operation: 'bulk-insert-claims' },
         extra: { totalRecords: claimsData.length }
@@ -114,7 +115,7 @@ class BulkInsertService {
     };
 
     try {
-      console.log(`Starting bulk insert of ${schedulesData.length} schedules...`);
+      logger.info(`Starting bulk insert of ${schedulesData.length} schedules...`);
       
       // Process in chunks
       const chunks = this.chunkArray(schedulesData, this.chunkSize);
@@ -124,7 +125,7 @@ class BulkInsertService {
         const chunkNumber = i + 1;
         const totalChunks = chunks.length;
         
-        console.log(`Processing chunk ${chunkNumber}/${totalChunks} (${chunk.length} records)...`);
+        logger.info(`Processing chunk ${chunkNumber}/${totalChunks} (${chunk.length} records)...`);
         
         try {
           await this.insertSchedulesWithRetry(chunk, chunkNumber);
@@ -132,10 +133,10 @@ class BulkInsertService {
           
           // Log progress
           const progress = ((results.processed / results.total) * 100).toFixed(2);
-          console.log(`Chunk ${chunkNumber} completed. Progress: ${progress}% (${results.processed}/${results.total})`);
+          logger.info(`Chunk ${chunkNumber} completed. Progress: ${progress}% (${results.processed}/${results.total})`);
           
         } catch (chunkError) {
-          console.error(`Error processing chunk ${chunkNumber}:`, chunkError);
+          logger.error(`Error processing chunk ${chunkNumber}:`, chunkError);
           results.errors += chunk.length;
           results.errorDetails.push({
             chunk: chunkNumber,
@@ -160,7 +161,7 @@ class BulkInsertService {
 
       results.duration = Date.now() - startTime;
       
-      console.log(`Bulk insert completed in ${results.duration}ms:`, {
+      logger.info(`Bulk insert completed in ${results.duration}ms:`, {
         total: results.total,
         processed: results.processed,
         errors: results.errors,
@@ -170,7 +171,7 @@ class BulkInsertService {
       return results;
 
     } catch (error) {
-      console.error('Critical error in bulk insert schedules:', error);
+      logger.error('Critical error in bulk insert schedules:', error);
       Sentry.captureException(error, {
         tags: { service: 'bulk-insert', operation: 'bulk-insert-schedules' },
         extra: { totalRecords: schedulesData.length }
@@ -196,7 +197,7 @@ class BulkInsertService {
     };
 
     try {
-      console.log(`Starting bulk insert of ${vaultsData.length} vaults...`);
+      logger.info(`Starting bulk insert of ${vaultsData.length} vaults...`);
       
       // Process in chunks
       const chunks = this.chunkArray(vaultsData, this.chunkSize);
@@ -206,7 +207,7 @@ class BulkInsertService {
         const chunkNumber = i + 1;
         const totalChunks = chunks.length;
         
-        console.log(`Processing chunk ${chunkNumber}/${totalChunks} (${chunk.length} records)...`);
+        logger.info(`Processing chunk ${chunkNumber}/${totalChunks} (${chunk.length} records)...`);
         
         try {
           await this.insertVaultsWithRetry(chunk, chunkNumber);
@@ -214,10 +215,10 @@ class BulkInsertService {
           
           // Log progress
           const progress = ((results.processed / results.total) * 100).toFixed(2);
-          console.log(`Chunk ${chunkNumber} completed. Progress: ${progress}% (${results.processed}/${results.total})`);
+          logger.info(`Chunk ${chunkNumber} completed. Progress: ${progress}% (${results.processed}/${results.total})`);
           
         } catch (chunkError) {
-          console.error(`Error processing chunk ${chunkNumber}:`, chunkError);
+          logger.error(`Error processing chunk ${chunkNumber}:`, chunkError);
           results.errors += chunk.length;
           results.errorDetails.push({
             chunk: chunkNumber,
@@ -242,7 +243,7 @@ class BulkInsertService {
 
       results.duration = Date.now() - startTime;
       
-      console.log(`Bulk insert completed in ${results.duration}ms:`, {
+      logger.info(`Bulk insert completed in ${results.duration}ms:`, {
         total: results.total,
         processed: results.processed,
         errors: results.errors,
@@ -252,7 +253,7 @@ class BulkInsertService {
       return results;
 
     } catch (error) {
-      console.error('Critical error in bulk insert vaults:', error);
+      logger.error('Critical error in bulk insert vaults:', error);
       Sentry.captureException(error, {
         tags: { service: 'bulk-insert', operation: 'bulk-insert-vaults' },
         extra: { totalRecords: vaultsData.length }
@@ -269,7 +270,7 @@ class BulkInsertService {
    */
   async optimizedHistoricalSync(historicalData, options = {}) {
     const startTime = Date.now();
-    console.log('Starting optimized historical sync...');
+    logger.info('Starting optimized historical sync...');
     
     const results = {
       claims: null,
@@ -331,7 +332,7 @@ class BulkInsertService {
       
       results.totalDuration = Date.now() - startTime;
       
-      console.log(`Optimized historical sync completed in ${results.totalDuration}ms:`, {
+      logger.info(`Optimized historical sync completed in ${results.totalDuration}ms:`, {
         totalRecords: results.totalRecords,
         totalProcessed: results.totalProcessed,
         totalErrors: results.totalErrors,
@@ -341,7 +342,7 @@ class BulkInsertService {
       return results;
 
     } catch (error) {
-      console.error('Critical error in optimized historical sync:', error);
+      logger.error('Critical error in optimized historical sync:', error);
       Sentry.captureException(error, {
         tags: { service: 'bulk-insert', operation: 'optimized-historical-sync' },
         extra: { 
@@ -375,7 +376,7 @@ class BulkInsertService {
           });
           
           await t.commit();
-          console.log(`Chunk ${chunkNumber}: Successfully inserted ${chunk.length} claims (attempt ${attempt})`);
+          logger.info(`Chunk ${chunkNumber}: Successfully inserted ${chunk.length} claims (attempt ${attempt})`);
           return;
           
         } catch (error) {
@@ -385,11 +386,11 @@ class BulkInsertService {
         
       } catch (error) {
         lastError = error;
-        console.warn(`Chunk ${chunkNumber}: Attempt ${attempt} failed:`, error.message);
+        logger.warn(`Chunk ${chunkNumber}: Attempt ${attempt} failed:`, error.message);
         
         if (attempt < this.maxRetries) {
           const delay = this.retryDelay * Math.pow(2, attempt - 1); // Exponential backoff
-          console.log(`Chunk ${chunkNumber}: Retrying in ${delay}ms...`);
+          logger.info(`Chunk ${chunkNumber}: Retrying in ${delay}ms...`);
           await this.delay(delay);
         }
       }
@@ -419,7 +420,7 @@ class BulkInsertService {
           });
           
           await t.commit();
-          console.log(`Chunk ${chunkNumber}: Successfully inserted ${chunk.length} schedules (attempt ${attempt})`);
+          logger.info(`Chunk ${chunkNumber}: Successfully inserted ${chunk.length} schedules (attempt ${attempt})`);
           return;
           
         } catch (error) {
@@ -429,11 +430,11 @@ class BulkInsertService {
         
       } catch (error) {
         lastError = error;
-        console.warn(`Chunk ${chunkNumber}: Attempt ${attempt} failed:`, error.message);
+        logger.warn(`Chunk ${chunkNumber}: Attempt ${attempt} failed:`, error.message);
         
         if (attempt < this.maxRetries) {
           const delay = this.retryDelay * Math.pow(2, attempt - 1);
-          console.log(`Chunk ${chunkNumber}: Retrying in ${delay}ms...`);
+          logger.info(`Chunk ${chunkNumber}: Retrying in ${delay}ms...`);
           await this.delay(delay);
         }
       }
@@ -463,7 +464,7 @@ class BulkInsertService {
           });
           
           await t.commit();
-          console.log(`Chunk ${chunkNumber}: Successfully inserted ${chunk.length} vaults (attempt ${attempt})`);
+          logger.info(`Chunk ${chunkNumber}: Successfully inserted ${chunk.length} vaults (attempt ${attempt})`);
           return;
           
         } catch (error) {
@@ -473,11 +474,11 @@ class BulkInsertService {
         
       } catch (error) {
         lastError = error;
-        console.warn(`Chunk ${chunkNumber}: Attempt ${attempt} failed:`, error.message);
+        logger.warn(`Chunk ${chunkNumber}: Attempt ${attempt} failed:`, error.message);
         
         if (attempt < this.maxRetries) {
           const delay = this.retryDelay * Math.pow(2, attempt - 1);
-          console.log(`Chunk ${chunkNumber}: Retrying in ${delay}ms...`);
+          logger.info(`Chunk ${chunkNumber}: Retrying in ${delay}ms...`);
           await this.delay(delay);
         }
       }
@@ -530,7 +531,7 @@ class BulkInsertService {
     if (config.maxRetries) this.maxRetries = config.maxRetries;
     if (config.retryDelay) this.retryDelay = config.retryDelay;
     
-    console.log('Bulk insert service configuration updated:', this.getPerformanceStats());
+    logger.info('Bulk insert service configuration updated:', this.getPerformanceStats());
   }
 }
 

@@ -1,5 +1,6 @@
 'use strict';
 
+const logger = require('../utils/logger');
 const cron = require('node-cron');
 const VestingStateReconciliationService = require('../services/vestingStateReconciliationService');
 const Sentry = require('@sentry/node');
@@ -20,19 +21,19 @@ class VestingStateReconciliationJob {
 
   start() {
     if (this.isRunning) {
-      console.warn('Vesting State Reconciliation Job is already running');
+      logger.warn('Vesting State Reconciliation Job is already running');
       return;
     }
 
-    console.log(`Initializing Vesting State Reconciliation Job (schedule: ${this.cronSchedule})...`);
+    logger.info(`Initializing Vesting State Reconciliation Job (schedule: ${this.cronSchedule})...`);
 
     this.task = cron.schedule(this.cronSchedule, async () => {
-      console.log('Running Vesting State Reconciliation Job...');
+      logger.info('Running Vesting State Reconciliation Job...');
       try {
         const summary = await this.service.reconcileAllVaults('scheduled');
-        console.log(`Vesting State Reconciliation Job completed: ${JSON.stringify(summary)}`);
+        logger.info(`Vesting State Reconciliation Job completed: ${JSON.stringify(summary)}`);
       } catch (error) {
-        console.error('Error in Vesting State Reconciliation Job:', error);
+        logger.error('Error in Vesting State Reconciliation Job:', error);
         Sentry.captureException(error, {
           tags: { service: 'vesting-state-reconciliation-job' },
         });
@@ -40,12 +41,12 @@ class VestingStateReconciliationJob {
     });
 
     this.isRunning = true;
-    console.log('Vesting State Reconciliation Job started.');
+    logger.info('Vesting State Reconciliation Job started.');
   }
 
   stop() {
     if (!this.isRunning) {
-      console.warn('Vesting State Reconciliation Job is not running');
+      logger.warn('Vesting State Reconciliation Job is not running');
       return;
     }
 
@@ -55,7 +56,7 @@ class VestingStateReconciliationJob {
     }
 
     this.isRunning = false;
-    console.log('Vesting State Reconciliation Job stopped.');
+    logger.info('Vesting State Reconciliation Job stopped.');
   }
 
   async runManually(vaultAddress = null, runType = 'manual') {
@@ -75,7 +76,7 @@ class VestingStateReconciliationJob {
 
   updateConfig(config) {
     this.service.updateConfig(config);
-    console.log('Vesting State Reconciliation Job config updated:', config);
+    logger.info('Vesting State Reconciliation Job config updated:', config);
   }
 }
 

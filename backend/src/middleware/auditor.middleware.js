@@ -1,4 +1,5 @@
 const auditorService = require("../services/auditorService");
+const logger = require("../utils/logger");
 
 /**
  * Middleware to authenticate auditor tokens.
@@ -30,7 +31,7 @@ const authenticateAuditor = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error("Auditor authentication error:", error.message);
+    logger.error("Auditor authentication error:", error.message);
     return res.status(401).json({
       success: false,
       error: error.message || "Auditor authentication failed",

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const axios = require('axios');
 const crypto = require('crypto');
 const { Op } = require('sequelize');
@@ -478,16 +479,16 @@ class ClaimWebhookDispatcherService {
 
     const message = JSON.stringify(entry);
     if (level === 'error') {
-      console.error(message);
+      logger.error(message);
       return;
     }
 
     if (level === 'warn') {
-      console.warn(message);
+      logger.warn(message);
       return;
     }
 
-    console.log(message);
+    logger.info(message);
   }
 }
 

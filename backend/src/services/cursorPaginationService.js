@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const crypto = require('crypto');
 
 /**
@@ -26,7 +27,7 @@ function decodeCursor(cursor) {
     const cursorString = Buffer.from(cursor, 'base64url').toString('utf8');
     return JSON.parse(cursorString);
   } catch (error) {
-    console.error('Invalid cursor format:', error);
+    logger.error('Invalid cursor format:', error);
     return null;
   }
 }

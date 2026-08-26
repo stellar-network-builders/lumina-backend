@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const cleanupService = require('../services/cleanupService');
 const Sentry = require('@sentry/node');
+const logger = require('../utils/logger');
 
 /**
  * POST /api/cleanup/check-eligibility
@@ -35,7 +36,7 @@ router.post('/check-eligibility', async (req, res) => {
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error checking cleanup eligibility:', error);
+    logger.error('Error checking cleanup eligibility:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -94,7 +95,7 @@ router.post('/create-task', async (req, res) => {
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error creating cleanup task:', error);
+    logger.error('Error creating cleanup task:', error);
     res.status(400).json({
       success: false,
       error: error.message
@@ -151,7 +152,7 @@ router.get('/available-rewards/:userAddress', async (req, res) => {
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error getting available rewards:', error);
+    logger.error('Error getting available rewards:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -212,7 +213,7 @@ router.post('/claim-reward', async (req, res) => {
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error claiming reward:', error);
+    logger.error('Error claiming reward:', error);
     res.status(400).json({
       success: false,
       error: error.message
@@ -262,7 +263,7 @@ router.patch('/reward-status', async (req, res) => {
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error updating reward status:', error);
+    logger.error('Error updating reward status:', error);
     res.status(400).json({
       success: false,
       error: error.message
@@ -288,7 +289,7 @@ router.get('/stats', async (req, res) => {
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error getting cleanup stats:', error);
+    logger.error('Error getting cleanup stats:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -330,7 +331,7 @@ router.delete('/task/:cleanupTaskId', async (req, res) => {
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error cancelling cleanup task:', error);
+    logger.error('Error cancelling cleanup task:', error);
     res.status(400).json({
       success: false,
       error: error.message
@@ -388,7 +389,7 @@ router.get('/task/:cleanupTaskId', async (req, res) => {
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error getting cleanup task:', error);
+    logger.error('Error getting cleanup task:', error);
     res.status(500).json({
       success: false,
       error: error.message

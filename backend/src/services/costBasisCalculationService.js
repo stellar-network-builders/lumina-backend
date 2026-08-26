@@ -1,5 +1,6 @@
 'use strict';
 
+const logger = require('../utils/logger');
 const { ConversionEvent, ClaimsHistory, Beneficiary, Vault } = require('../models');
 const { sequelize } = require('../database/connection');
 const { Op } = require('sequelize');
@@ -86,7 +87,7 @@ class CostBasisCalculationService {
       };
 
     } catch (error) {
-      console.error('Error calculating cost basis:', error);
+      logger.error('Error calculating cost basis:', error);
       throw error;
     }
   }
@@ -473,7 +474,7 @@ class CostBasisCalculationService {
         lastUpdated: new Date()
       };
     } catch (error) {
-      console.error('Error calculating current position:', error);
+      logger.error('Error calculating current position:', error);
       return {
         assetCode,
         currentBalance: 0,
@@ -519,7 +520,7 @@ class CostBasisCalculationService {
         unrealizedLoss: totalGain < 0 ? Math.abs(totalGain) : 0
       };
     } catch (error) {
-      console.error('Error calculating unrealized gains:', error);
+      logger.error('Error calculating unrealized gains:', error);
       return {
         totalCostBasis: 0,
         totalAmount: 0,
@@ -595,7 +596,7 @@ class CostBasisCalculationService {
 
       return balance ? parseFloat(balance.balance) : 0;
     } catch (error) {
-      console.error('Error getting current balance:', error);
+      logger.error('Error getting current balance:', error);
       return 0;
     }
   }
@@ -615,7 +616,7 @@ class CostBasisCalculationService {
       // For other assets, fetch from price oracle
       return 1.0; // Placeholder
     } catch (error) {
-      console.error('Error getting current price:', error);
+      logger.error('Error getting current price:', error);
       return 1.0;
     }
   }
@@ -708,7 +709,7 @@ class CostBasisCalculationService {
       };
 
     } catch (error) {
-      console.error('Error generating tax report:', error);
+      logger.error('Error generating tax report:', error);
       throw error;
     }
   }

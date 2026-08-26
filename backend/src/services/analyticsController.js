@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const analyticsService = require('../services/analyticsService');
 
 class AnalyticsController {
@@ -13,7 +14,7 @@ class AnalyticsController {
         data: topClaimers
       });
     } catch (error) {
-      console.error('Error in getTopClaimers:', error);
+      logger.error('Error in getTopClaimers:', error);
       return res.status(500).json({
         success: false,
         error: 'Failed to fetch top claimers'

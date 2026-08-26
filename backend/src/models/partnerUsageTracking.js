@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../database/connection');
 const PartnerManagement = require('./partnerManagement');
@@ -122,7 +123,7 @@ PartnerUsageTracking.trackRequest = async function(requestData) {
   try {
     await this.create(requestData);
   } catch (error) {
-    console.error('Error tracking partner usage:', error);
+    logger.error('Error tracking partner usage:', error);
   }
 };
 

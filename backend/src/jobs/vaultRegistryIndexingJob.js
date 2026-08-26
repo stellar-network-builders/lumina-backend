@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const cron = require('node-cron');
 const vaultRegistryService = require('../services/vaultRegistryService');
 const Sentry = require('@sentry/node');
@@ -13,12 +14,12 @@ class VaultRegistryIndexingJob {
    * Runs every 2 minutes to check for new vault deployments
    */
   start() {
-    console.log('Starting Vault Registry Indexing Job...');
+    logger.info('Starting Vault Registry Indexing Job...');
     
     // Schedule to run every 2 minutes
     cron.schedule('*/2 * * * *', async () => {
       if (this.isRunning) {
-        console.log('Vault registry indexing job already running, skipping...');
+        logger.info('Vault registry indexing job already running, skipping...');
         return;
       }
 
@@ -34,7 +35,7 @@ class VaultRegistryIndexingJob {
    */
   async execute() {
     if (this.isRunning) {
-      console.log('Vault registry indexing already in progress');
+      logger.info('Vault registry indexing already in progress');
       return;
     }
 
@@ -42,19 +43,19 @@ class VaultRegistryIndexingJob {
     const startTime = Date.now();
 
     try {
-      console.log(`[${new Date().toISOString()}] Starting vault registry indexing...`);
+      logger.info(`[${new Date().toISOString()}] Starting vault registry indexing...`);
       
       const result = await vaultRegistryService.monitorForNewVaults();
       
       const duration = Date.now() - startTime;
-      console.log(`[${new Date().toISOString()}] Vault registry indexing completed in ${duration}ms`);
-      console.log(`Processed ${result.processed} ledgers, found ${result.newVaults.length} new vaults`);
+      logger.info(`[${new Date().toISOString()}] Vault registry indexing completed in ${duration}ms`);
+      logger.info(`Processed ${result.processed} ledgers, found ${result.newVaults.length} new vaults`);
 
       // Log details about new vaults found
       if (result.newVaults.length > 0) {
-        console.log('New vaults discovered:');
+        logger.info('New vaults discovered:');
         result.newVaults.forEach(vault => {
-          console.log(`  - ${vault.contract_id} (${vault.project_name}) by ${vault.creator_address}`);
+          logger.info(`  - ${vault.contract_id} (${vault.project_name}) by ${vault.creator_address}`);
         });
       }
 
@@ -62,7 +63,7 @@ class VaultRegistryIndexingJob {
       this.sendMetrics(result, duration);
 
     } catch (error) {
-      console.error('Error in vault registry indexing job:', error);
+      logger.error('Error in vault registry indexing job:', error);
       Sentry.captureException(error, {
         tags: { 
           job: this.jobName,
@@ -94,7 +95,7 @@ class VaultRegistryIndexingJob {
         success: true
       };
 
-      console.log('Vault Registry Indexing Metrics:', JSON.stringify(metrics, null, 2));
+      logger.info('Vault Registry Indexing Metrics:', JSON.stringify(metrics, null, 2));
 
       // You could send this to:
       // - Prometheus
@@ -103,7 +104,7 @@ class VaultRegistryIndexingJob {
       // - Your custom metrics system
       
     } catch (error) {
-      console.error('Error sending metrics:', error);
+      logger.error('Error sending metrics:', error);
     }
   }
 
@@ -123,7 +124,7 @@ class VaultRegistryIndexingJob {
    * Stop the job
    */
   stop() {
-    console.log('Stopping Vault Registry Indexing Job...');
+    logger.info('Stopping Vault Registry Indexing Job...');
     // Note: cron jobs don't have a built-in stop method in node-cron
     // In a production environment, you might want to use a more sophisticated job scheduler
   }
@@ -132,7 +133,7 @@ class VaultRegistryIndexingJob {
    * Manually trigger the indexing process
    */
   async trigger() {
-    console.log('Manually triggering vault registry indexing...');
+    logger.info('Manually triggering vault registry indexing...');
     await this.execute();
   }
 }

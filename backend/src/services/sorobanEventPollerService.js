@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { sequelize } = require('../database/connection');
 const { SorobanEvent, IndexerState } = require('../models');
 const SorobanRpcClient = require('./sorobanRpcClient');
@@ -65,11 +66,11 @@ class SorobanEventPollerService {
    */
   async start() {
     if (this.isRunning) {
-      console.warn('Soroban Event Poller Service is already running');
+      logger.warn('Soroban Event Poller Service is already running');
       return;
     }
 
-    console.log('Starting Soroban Event Poller Service...');
+    logger.info('Starting Soroban Event Poller Service...');
     
     // Verify RPC connectivity
     const isHealthy = await this.rpcClient.healthCheck();
@@ -86,22 +87,22 @@ class SorobanEventPollerService {
     // Schedule regular polling
     this.intervalId = setInterval(() => {
       this.pollEvents().catch(error => {
-        console.error('Error in scheduled poll:', error);
+        logger.error('Error in scheduled poll:', error);
         Sentry.captureException(error, {
           tags: { service: this.serviceName, operation: 'scheduled_poll' }
         });
       });
     }, this.pollInterval);
 
-    console.log(`Soroban Event Poller Service started - polling every ${this.pollInterval/1000} seconds`);
+    logger.info(`Soroban Event Poller Service started - polling every ${this.pollInterval/1000} seconds`);
     
     // Start reorg detector
     await this.reorgDetector.start();
-    console.log('Ledger Reorg Detector started');
+    logger.info('Ledger Reorg Detector started');
     
     // Start RPC queue service
     await this.rpcQueueService.start();
-    console.log('RPC Queue Service started');
+    logger.info('RPC Queue Service started');
   }
 
   /**
@@ -109,11 +110,11 @@ class SorobanEventPollerService {
    */
   async stop() {
     if (!this.isRunning) {
-      console.warn('Soroban Event Poller Service is not running');
+      logger.warn('Soroban Event Poller Service is not running');
       return;
     }
 
-    console.log('Stopping Soroban Event Poller Service...');
+    logger.info('Stopping Soroban Event Poller Service...');
     this.isRunning = false;
     
     if (this.intervalId) {
@@ -121,15 +122,15 @@ class SorobanEventPollerService {
       this.intervalId = null;
     }
 
-    console.log('Soroban Event Poller Service stopped');
+    logger.info('Soroban Event Poller Service stopped');
     
     // Stop reorg detector
     await this.reorgDetector.stop();
-    console.log('Ledger Reorg Detector stopped');
+    logger.info('Ledger Reorg Detector stopped');
     
     // Stop RPC queue service
     await this.rpcQueueService.stop();
-    console.log('RPC Queue Service stopped');
+    logger.info('RPC Queue Service stopped');
   }
 
   /**
@@ -142,19 +143,19 @@ class SorobanEventPollerService {
     const startTime = Date.now();
     
     try {
-      console.log(`[${pollId}] Starting event poll...`);
+      logger.info(`[${pollId}] Starting event poll...`);
       
       // Select healthy endpoint before each polling cycle
       const healthyEndpoint = this.rpcClient.selectHealthyEndpoint();
       if (healthyEndpoint !== this.rpcClient.getActiveEndpoint()) {
-        console.log(`[${pollId}] Switched to healthy RPC endpoint: ${healthyEndpoint}`);
+        logger.info(`[${pollId}] Switched to healthy RPC endpoint: ${healthyEndpoint}`);
       }
 
       // Check for reorgs before polling
       if (this.reorgDetector.isRunning) {
         const reorgCheck = await this.reorgDetector.triggerCheck();
         if (reorgCheck.issues.length > 0) {
-          console.log(`[${pollId}] Reorg issues detected, skipping poll to allow handling`);
+          logger.info(`[${pollId}] Reorg issues detected, skipping poll to allow handling`);
           return;
         }
       }
@@ -171,7 +172,7 @@ class SorobanEventPollerService {
       }
       
       if (latestLedger <= lastProcessedLedger) {
-        console.log(`[${pollId}] No new ledgers (latest: ${latestLedger}, last processed: ${lastProcessedLedger})`);
+        logger.info(`[${pollId}] No new ledgers (latest: ${latestLedger}, last processed: ${lastProcessedLedger})`);
         return;
       }
 
@@ -179,7 +180,7 @@ class SorobanEventPollerService {
       const startLedger = lastProcessedLedger + 1;
       const endLedger = Math.min(startLedger + this.batchSize - 1, latestLedger);
       
-      console.log(`[${pollId}] Fetching events from ledgers ${startLedger} to ${endLedger}`);
+      logger.info(`[${pollId}] Fetching events from ledgers ${startLedger} to ${endLedger}`);
       
       // Fetch events
       const events = await this.fetchEventsInRange(startLedger, endLedger);
@@ -193,10 +194,10 @@ class SorobanEventPollerService {
       }
       
       const duration = Date.now() - startTime;
-      console.log(`[${pollId}] Poll completed in ${duration}ms - processed ${processedCount} events from ${endLedger - startLedger + 1} ledgers`);
+      logger.info(`[${pollId}] Poll completed in ${duration}ms - processed ${processedCount} events from ${endLedger - startLedger + 1} ledgers`);
       
     } catch (error) {
-      console.error(`[${pollId}] Poll failed:`, error);
+      logger.error(`[${pollId}] Poll failed:`, error);
       Sentry.captureException(error, {
         tags: { service: this.serviceName, operation: 'poll_events' },
         extra: { poll_id: pollId }
@@ -241,7 +242,7 @@ class SorobanEventPollerService {
         throw new Error(`RPC job failed: ${result.error?.message || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error(`Failed to fetch events for ledgers ${startLedger}-${endLedger}:`, error);
+      logger.error(`Failed to fetch events for ledgers ${startLedger}-${endLedger}:`, error);
       throw error;
     }
   }
@@ -258,14 +259,14 @@ class SorobanEventPollerService {
     let processedCount = 0;
     const relevantEvents = events.filter(event => this.isRelevantEvent(event));
     
-    console.log(`[${pollId}] Found ${relevantEvents.length} relevant events out of ${events.length} total`);
+    logger.info(`[${pollId}] Found ${relevantEvents.length} relevant events out of ${events.length} total`);
 
     for (const event of relevantEvents) {
       try {
         await this.storeEvent(event);
         processedCount++;
       } catch (error) {
-        console.error(`[${pollId}] Failed to store event:`, error);
+        logger.error(`[${pollId}] Failed to store event:`, error);
         Sentry.captureException(error, {
           tags: { service: this.serviceName, operation: 'store_event' },
           extra: { event, poll_id: pollId }
@@ -319,7 +320,7 @@ class SorobanEventPollerService {
     });
 
     if (existingEvent) {
-      console.warn(`Event already exists: ${eventType} in ledger ${ledgerSequence}`);
+      logger.warn(`Event already exists: ${eventType} in ledger ${ledgerSequence}`);
       return existingEvent;
     }
 
@@ -333,7 +334,7 @@ class SorobanEventPollerService {
       event_timestamp: eventTimestamp
     });
 
-    console.log(`Stored event: ${eventType} from ledger ${ledgerSequence}`);
+    logger.info(`Stored event: ${eventType} from ledger ${ledgerSequence}`);
     return eventRecord;
   }
 
@@ -367,7 +368,7 @@ class SorobanEventPollerService {
       }
       return 0; // Start from beginning if no state exists
     } catch (error) {
-      console.error('Error fetching last processed ledger:', error);
+      logger.error('Error fetching last processed ledger:', error);
       throw error;
     }
   }
@@ -391,9 +392,9 @@ class SorobanEventPollerService {
         await state.save();
       }
       
-      console.log(`Updated last processed ledger to: ${sequence}`);
+      logger.info(`Updated last processed ledger to: ${sequence}`);
     } catch (error) {
-      console.error('Error updating last processed ledger:', error);
+      logger.error('Error updating last processed ledger:', error);
       throw error;
     }
   }
@@ -514,7 +515,7 @@ class SorobanEventPollerService {
   addContractAddress(contractAddress) {
     if (!this.contractAddresses.includes(contractAddress)) {
       this.contractAddresses.push(contractAddress);
-      console.log(`Added contract address to monitoring: ${contractAddress}`);
+      logger.info(`Added contract address to monitoring: ${contractAddress}`);
     }
   }
 
@@ -526,7 +527,7 @@ class SorobanEventPollerService {
     const index = this.contractAddresses.indexOf(contractAddress);
     if (index > -1) {
       this.contractAddresses.splice(index, 1);
-      console.log(`Removed contract address from monitoring: ${contractAddress}`);
+      logger.info(`Removed contract address from monitoring: ${contractAddress}`);
     }
   }
 }

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const accountingExportService = require('../services/accountingExportService');
 const { Organization } = require('../models');
+const logger = require('../utils/logger');
 
 /**
  * GET /api/org/:id/export/xero
@@ -54,7 +55,7 @@ router.get('/:id/export/xero', async (req, res) => {
     res.send(csvContent);
 
   } catch (error) {
-    console.error('Error in Xero export endpoint:', error);
+    logger.error('Error in Xero export endpoint:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
@@ -114,7 +115,7 @@ router.get('/:id/export/quickbooks', async (req, res) => {
     res.send(csvContent);
 
   } catch (error) {
-    console.error('Error in QuickBooks export endpoint:', error);
+    logger.error('Error in QuickBooks export endpoint:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
@@ -178,7 +179,7 @@ router.get('/:id/export/summary', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error in export summary endpoint:', error);
+    logger.error('Error in export summary endpoint:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error',

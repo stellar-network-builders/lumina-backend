@@ -1,5 +1,6 @@
 'use strict';
 
+const logger = require('../utils/logger');
 const { Vault, Beneficiary, SubSchedule } = require('../models');
 const { sequelize } = require('../database/connection');
 const auditLogger = require('./auditLogger');
@@ -140,7 +141,7 @@ class VestingService {
         };
       }
     } catch (error) {
-      console.error('Error in createVault:', error);
+      logger.error('Error in createVault:', error);
       throw error;
     }
   }
@@ -213,7 +214,7 @@ class VestingService {
           where: { transaction_hash: txHash, event_index }
         });
         if (existing) {
-          console.log(`Duplicate top-up detected: ${txHash}:${event_index}, returning existing record`);
+          logger.info(`Duplicate top-up detected: ${txHash}:${event_index}, returning existing record`);
           return existing;
         }
       }
@@ -441,7 +442,7 @@ class VestingService {
         const feeDistributorService = require('./feeDistributorService');
         await feeDistributorService.accumulateFeeForVault(vault.id, withdrawAmount);
     } catch (feeError) {
-        console.warn('Failed to accumulate protocol fee:', feeError.message);
+        logger.warn('Failed to accumulate protocol fee:', feeError.message);
     }
 
     return {

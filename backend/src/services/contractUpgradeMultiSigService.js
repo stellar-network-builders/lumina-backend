@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { 
   ContractUpgradeProposal, 
   ContractUpgradeSignature, 
@@ -326,7 +327,7 @@ class ContractUpgradeMultiSigService {
       };
 
     } catch (error) {
-      console.error('Error calculating approval status:', error);
+      logger.error('Error calculating approval status:', error);
       throw error;
     }
   }
@@ -385,7 +386,7 @@ class ContractUpgradeMultiSigService {
       return { valid: true };
 
     } catch (error) {
-      console.error('Error validating multi-sig signature:', error);
+      logger.error('Error validating multi-sig signature:', error);
       return { valid: false, error: error.message };
     }
   }
@@ -399,7 +400,7 @@ class ContractUpgradeMultiSigService {
   async notifySigners(proposal, signers, proposer) {
     try {
       // This would integrate with notification service (email, push, etc.)
-      console.log(`Notifying signers about proposal ${proposal.id}:`, {
+      logger.info(`Notifying signers about proposal ${proposal.id}:`, {
         vault_address: proposal.vault_address,
         proposed_wasm_hash: proposal.proposed_wasm_hash,
         signers,
@@ -410,7 +411,7 @@ class ContractUpgradeMultiSigService {
       // Could use emailService, notificationService, etc.
 
     } catch (error) {
-      console.error('Error notifying signers:', error);
+      logger.error('Error notifying signers:', error);
       // Don't throw error - notification failure shouldn't block proposal creation
     }
   }
@@ -425,7 +426,7 @@ class ContractUpgradeMultiSigService {
   async notifySignatureUpdate(proposal, signer, decision, approvalStatus) {
     try {
       // This would notify other signers and relevant parties
-      console.log(`Signature update for proposal ${proposal.id}:`, {
+      logger.info(`Signature update for proposal ${proposal.id}:`, {
         signer,
         decision,
         status: approvalStatus.status,
@@ -436,7 +437,7 @@ class ContractUpgradeMultiSigService {
       // Placeholder for notification implementation
 
     } catch (error) {
-      console.error('Error notifying signature update:', error);
+      logger.error('Error notifying signature update:', error);
       // Don't throw error - notification failure shouldn't block signature submission
     }
   }

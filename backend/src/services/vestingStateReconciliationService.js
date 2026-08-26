@@ -1,5 +1,6 @@
 'use strict';
 
+const logger = require('../utils/logger');
 const { Vault, Beneficiary, SubSchedule, ClaimsHistory, SorobanEvent, IndexerState } = require('../models');
 const { sequelize } = require('../database/connection');
 const { Op } = require('sequelize');
@@ -56,7 +57,7 @@ class VestingStateReconciliationService {
     let autoReconciled = 0;
 
     try {
-      console.log(`[${runId}] Starting state reconciliation for all vaults (runType=${runType})...`);
+      logger.info(`[${runId}] Starting state reconciliation for all vaults (runType=${runType})...`);
 
       const vaults = await Vault.findAll({
         where: { is_active: true, is_blacklisted: false },
@@ -74,7 +75,7 @@ class VestingStateReconciliationService {
           }
         } catch (err) {
           errors++;
-          console.error(`[${runId}] Reconciliation failed for vault ${vault.address}:`, err.message);
+          logger.error(`[${runId}] Reconciliation failed for vault ${vault.address}:`, err.message);
           Sentry.captureException(err, {
             tags: { service: this.serviceName, vault_address: vault.address },
             extra: { run_id: runId },
@@ -98,14 +99,14 @@ class VestingStateReconciliationService {
       this.lastRunAt = new Date();
       this.lastRunSummary = summary;
 
-      console.log(
+      logger.info(
         `[${runId}] Reconciliation complete: ${checked} checked, ${inSync} in-sync, ` +
         `${desync} desync (${autoReconciled} auto-reconciled), ${errors} errors — ${duration}ms`
       );
 
       return summary;
     } catch (err) {
-      console.error(`[${runId}] Fatal reconciliation error:`, err);
+      logger.error(`[${runId}] Fatal reconciliation error:`, err);
       Sentry.captureException(err, { tags: { service: this.serviceName, operation: 'reconcile_all' } });
       throw err;
     } finally {
@@ -153,7 +154,7 @@ class VestingStateReconciliationService {
         ledgerAtCheck = chainResult.ledgerSequence;
       } catch (chainErr) {
         // If on-chain fetch fails, record error but continue with partial checks
-        console.warn(`On-chain state fetch failed for vault ${vault.address}: ${chainErr.message}`);
+        logger.warn(`On-chain state fetch failed for vault ${vault.address}: ${chainErr.message}`);
       }
 
       // ── 3. Run individual checks ───────────────────────────────────────────
@@ -381,7 +382,7 @@ class VestingStateReconciliationService {
       const balanceStr = await balanceTracker.getActualBalance(vault.token_address, vault.address);
       onChainBalance = parseFloat(balanceStr) || 0;
     } catch (err) {
-      console.warn(`Could not fetch on-chain balance for vault ${vault.address}: ${err.message}`);
+      logger.warn(`Could not fetch on-chain balance for vault ${vault.address}: ${err.message}`);
     }
 
     // Attempt to read on-chain vesting schedule data via contract instance
@@ -394,7 +395,7 @@ class VestingStateReconciliationService {
       onChainCumulativeClaimed = contractState.cumulativeClaimed;
       onChainTotalAllocated = contractState.totalAllocated;
     } catch (err) {
-      console.warn(`Could not read contract state for vault ${vault.address}: ${err.message}`);
+      logger.warn(`Could not read contract state for vault ${vault.address}: ${err.message}`);
     }
 
     return {
@@ -727,7 +728,7 @@ class VestingStateReconciliationService {
 
           case 'unprocessed_events': {
             // Don't auto-process events; just flag for the event processor
-            console.warn(
+            logger.warn(
               `Auto-reconcile: skipping unprocessed events fix for vault ${vault.address} — ` +
               `requires event processor to handle`
             );
@@ -737,7 +738,7 @@ class VestingStateReconciliationService {
           default: {
             // For subschedule_count, total_allocated, cumulative_claimed, on_chain_balance:
             // these require on-chain data to reconcile safely — log but don't auto-fix
-            console.warn(
+            logger.warn(
               `Auto-reconcile: skipping ${detail.check} fix — requires manual review or on-chain data`
             );
           }
@@ -756,7 +757,7 @@ class VestingStateReconciliationService {
       return { success: fixesApplied > 0, fixesApplied };
     } catch (err) {
       await t.rollback();
-      console.error(`Auto-reconcile failed for vault ${vault.address}:`, err);
+      logger.error(`Auto-reconcile failed for vault ${vault.address}:`, err);
       return { success: false, error: err.message };
     }
   }
@@ -786,7 +787,7 @@ class VestingStateReconciliationService {
         priority: 'high',
       });
     } catch (err) {
-      console.error('Failed to send desync alert:', err);
+      logger.error('Failed to send desync alert:', err);
     }
   }
 

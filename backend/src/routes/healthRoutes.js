@@ -1,6 +1,7 @@
 const express = require('express');
 const syncHealthCheckService = require('../services/syncHealthCheckService');
 const Sentry = require('@sentry/node');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 
@@ -20,7 +21,7 @@ router.get('/indexer', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error in health check endpoint:', error);
+    logger.error('Error in health check endpoint:', error);
     
     Sentry.captureException(error, {
       tags: { endpoint: '/health/indexer' },
@@ -51,7 +52,7 @@ router.get('/indexer/detailed', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error in detailed health check endpoint:', error);
+    logger.error('Error in detailed health check endpoint:', error);
     
     Sentry.captureException(error, {
       tags: { endpoint: '/health/indexer/detailed' },
@@ -80,7 +81,7 @@ router.get('/indexer/config', (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error getting health check config:', error);
+    logger.error('Error getting health check config:', error);
     
     res.status(500).json({
       success: false,
@@ -133,7 +134,7 @@ router.post('/indexer/config', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error updating health check config:', error);
+    logger.error('Error updating health check config:', error);
     
     Sentry.captureException(error, {
       tags: { endpoint: '/health/indexer/config' },
@@ -163,7 +164,7 @@ router.post('/indexer/cache/clear', (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error clearing health check cache:', error);
+    logger.error('Error clearing health check cache:', error);
     
     res.status(500).json({
       success: false,
@@ -193,7 +194,7 @@ router.get('/', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error in basic health check:', error);
+    logger.error('Error in basic health check:', error);
     
     res.status(503).json({
       success: false,

@@ -3,6 +3,7 @@ const router = express.Router();
 const analyticsController = require('../services/analyticsController');
 const authService = require('../services/authService');
 const roiAnalyticsService = require('../services/roiAnalyticsService');
+const logger = require('../utils/logger');
 const dexOracleService = require('../services/dexOracleService');
 const syncHealthCheckService = require('../services/syncHealthCheckService');
 
@@ -58,7 +59,7 @@ router.get(
         }
       });
     } catch (error) {
-      console.error('Error getting user ROI analytics:', error);
+      logger.error('Error getting user ROI analytics:', error);
       res.status(500).json({
         success: false,
         error: error.message
@@ -114,7 +115,7 @@ router.get(
         }
       });
     } catch (error) {
-      console.error('Error getting vault ROI analytics:', error);
+      logger.error('Error getting vault ROI analytics:', error);
       res.status(500).json({
         success: false,
         error: error.message
@@ -170,7 +171,7 @@ router.get(
         }
       });
     } catch (error) {
-      console.error('Error getting grant ROI analytics:', error);
+      logger.error('Error getting grant ROI analytics:', error);
       res.status(500).json({
         success: false,
         error: error.message
@@ -208,7 +209,7 @@ router.post(
         data: analytics
       });
     } catch (error) {
-      console.error('Error getting batch ROI analytics:', error);
+      logger.error('Error getting batch ROI analytics:', error);
       res.status(500).json({
         success: false,
         error: error.message
@@ -230,7 +231,7 @@ router.get(
         data: overview
       });
     } catch (error) {
-      console.error('Error getting market overview:', error);
+      logger.error('Error getting market overview:', error);
       res.status(500).json({
         success: false,
         error: error.message
@@ -269,7 +270,7 @@ router.get(
         data: priceData
       });
     } catch (error) {
-      console.error('Error getting oracle price:', error);
+      logger.error('Error getting oracle price:', error);
       res.status(500).json({
         success: false,
         error: error.message
@@ -317,7 +318,7 @@ router.get(
         data: priceData
       });
     } catch (error) {
-      console.error('Error getting historical oracle price:', error);
+      logger.error('Error getting historical oracle price:', error);
       res.status(500).json({
         success: false,
         error: error.message
@@ -339,7 +340,7 @@ router.get(
         data: health
       });
     } catch (error) {
-      console.error('Error getting oracle health:', error);
+      logger.error('Error getting oracle health:', error);
       res.status(500).json({
         success: false,
         error: error.message
@@ -363,7 +364,7 @@ router.get(
         }
       });
     } catch (error) {
-      console.error('Error getting supported sources:', error);
+      logger.error('Error getting supported sources:', error);
       res.status(500).json({
         success: false,
         error: error.message
@@ -395,7 +396,7 @@ router.post(
         message: 'Cache cleared successfully'
       });
     } catch (error) {
-      console.error('Error clearing cache:', error);
+      logger.error('Error clearing cache:', error);
       res.status(500).json({
         success: false,
         error: error.message

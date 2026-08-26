@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { Vault, TVL } = require('../models');
 const cacheService = require('./cacheService');
 const requestDeduplicationMiddleware = require('../middleware/requestDeduplication.middleware');
@@ -30,7 +31,7 @@ class TVLService {
         activeVaultsCount: vaults.length
       };
     } catch (error) {
-      console.error('Error calculating TVL:', error);
+      logger.error('Error calculating TVL:', error);
       throw error;
     }
   }
@@ -92,7 +93,7 @@ class TVLService {
         });
       }
     } catch (error) {
-      console.error('Error creating historical TVL snapshot:', error);
+      logger.error('Error creating historical TVL snapshot:', error);
       throw error;
     }
   }
@@ -117,7 +118,7 @@ class TVLService {
         order: [['snapshot_date', 'ASC']]
       });
     } catch (error) {
-      console.error('Error getting historical TVL:', error);
+      logger.error('Error getting historical TVL:', error);
       throw error;
     }
   }
@@ -147,11 +148,11 @@ class TVLService {
         });
       }
 
-      console.log(`TVL updated: ${totalValueLocked} across ${activeVaultsCount} vaults`);
+      logger.info(`TVL updated: ${totalValueLocked} across ${activeVaultsCount} vaults`);
 
       // Create historical snapshot (don't await to avoid blocking)
       this.createHistoricalSnapshot().catch(error => {
-        console.error('Error creating historical TVL snapshot:', error);
+        logger.error('Error creating historical TVL snapshot:', error);
       });
 
       // Broadcast TVL update via WebSocket
@@ -159,7 +160,7 @@ class TVLService {
 
       return tvlRecord;
     } catch (error) {
-      console.error('Error updating TVL:', error);
+      logger.error('Error updating TVL:', error);
       throw error;
     }
   }
@@ -186,7 +187,7 @@ class TVLService {
           created_at: tvlRecord.created_at
         };
       } catch (error) {
-        console.error('Error getting TVL stats:', error);
+        logger.error('Error getting TVL stats:', error);
         throw error;
       }
     }, 900); // 15 minutes TTL
@@ -199,14 +200,14 @@ class TVLService {
    */
   async handleVaultCreated(vaultData) {
     try {
-      console.log(`Handling VaultCreated event for vault: ${vaultData.address}`);
+      logger.info(`Handling VaultCreated event for vault: ${vaultData.address}`);
       
       // Clear TVL cache and related deduplication cache
       await this.invalidateTVLCache();
       
       await this.updateTVL();
     } catch (error) {
-      console.error('Error handling vault created event:', error);
+      logger.error('Error handling vault created event:', error);
     }
   }
 
@@ -217,14 +218,14 @@ class TVLService {
    */
   async handleClaim(claimData) {
     try {
-      console.log(`Handling Claim event for transaction: ${claimData.transaction_hash}`);
+      logger.info(`Handling Claim event for transaction: ${claimData.transaction_hash}`);
       
       // Clear TVL cache and related deduplication cache
       await this.invalidateTVLCache();
       
       await this.updateTVL();
     } catch (error) {
-      console.error('Error handling claim event:', error);
+      logger.error('Error handling claim event:', error);
     }
   }
 
@@ -240,9 +241,9 @@ class TVLService {
       // Clear deduplication cache for TVL operations
       await requestDeduplicationMiddleware.clearOperationCache('tvl_calculation');
       
-      console.log('[TVL] TVL cache invalidated');
+      logger.info('[TVL] TVL cache invalidated');
     } catch (error) {
-      console.error('Error invalidating TVL cache:', error);
+      logger.error('Error invalidating TVL cache:', error);
     }
   }
 
@@ -279,7 +280,7 @@ class TVLService {
 
       await publishTVLUpdate(tvlStats);
     } catch (error) {
-      console.error('Error broadcasting TVL update:', error);
+      logger.error('Error broadcasting TVL update:', error);
       // Don't throw - broadcast failure shouldn't fail TVL update
     }
   }

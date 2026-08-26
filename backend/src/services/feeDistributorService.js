@@ -1,5 +1,6 @@
 'use strict';
 
+const logger = require('../utils/logger');
 const { Vault } = require('../models');
 const { sequelize } = require('../database/connection');
 const { Op } = require('sequelize');
@@ -28,7 +29,7 @@ class FeeDistributorService {
     const total = await this.summarizeAccumulatedFees();
 
     if (total >= threshold) {
-      console.log(`🚀 Fee threshold met (${total} >= ${threshold}). Triggering distribution to Treasury...`);
+      logger.info(`🚀 Fee threshold met (${total} >= ${threshold}). Triggering distribution to Treasury...`);
       return await this.distributeFees();
     }
 

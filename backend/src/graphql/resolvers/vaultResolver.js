@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const models = require('../../models');
 const cacheService = require('../../services/cacheService');
 const tvlService = require('../../services/tvlService');
@@ -31,7 +32,7 @@ const vaultResolver = {
         });
         return vault;
       } catch (error) {
-        console.error('Error fetching vault:', error);
+        logger.error('Error fetching vault:', error);
         throw new Error(`Failed to fetch vault: ${error.message}`);
       }
     },
@@ -68,7 +69,7 @@ const vaultResolver = {
         });
         return vaults;
       } catch (error) {
-        console.error('Error fetching vaults:', error);
+        logger.error('Error fetching vaults:', error);
         throw new Error(`Failed to fetch vaults: ${error.message}`);
       }
     },
@@ -109,7 +110,7 @@ const vaultResolver = {
           totalBeneficiaries: vault.beneficiaries.length
         };
       } catch (error) {
-        console.error('Error fetching vault summary:', error);
+        logger.error('Error fetching vault summary:', error);
         throw new Error(`Failed to fetch vault summary: ${error.message}`);
       }
     }
@@ -129,20 +130,20 @@ const vaultResolver = {
         // Invalidate cache for the owner
         if (input.ownerAddress) {
           await cacheService.invalidateUserVaults(input.ownerAddress);
-          console.log(`Invalidated cache for user vaults: ${input.ownerAddress}`);
+          logger.info(`Invalidated cache for user vaults: ${input.ownerAddress}`);
         }
 
         // Update TVL for new vault
         try {
           await tvlService.handleVaultCreated(vault.toJSON());
         } catch (tvlError) {
-          console.error('Error updating TVL for new vault:', tvlError);
+          logger.error('Error updating TVL for new vault:', tvlError);
           // Don't throw - TVL update failure shouldn't fail vault creation
         }
 
         return vault;
       } catch (error) {
-        console.error('Error creating vault:', error);
+        logger.error('Error creating vault:', error);
         throw new Error(`Failed to create vault: ${error.message}`);
       }
     },
@@ -180,13 +181,13 @@ const vaultResolver = {
         try {
           await tvlService.handleVaultCreated(vault.toJSON());
         } catch (tvlError) {
-          console.error('Error updating TVL for vault top-up:', tvlError);
+          logger.error('Error updating TVL for vault top-up:', tvlError);
           // Don't throw - TVL update failure shouldn't fail top-up
         }
 
         return subSchedule;
       } catch (error) {
-        console.error('Error processing top-up:', error);
+        logger.error('Error processing top-up:', error);
         throw new Error(`Failed to process top-up: ${error.message}`);
       }
     }
@@ -199,7 +200,7 @@ const vaultResolver = {
       try {
         return await models.Organization.findByPk(vault.org_id);
       } catch (error) {
-        console.error('Error fetching organization for vault:', error);
+        logger.error('Error fetching organization for vault:', error);
         return null;
       }
     },
@@ -209,7 +210,7 @@ const vaultResolver = {
           where: { vault_id: vault.id }
         });
       } catch (error) {
-        console.error('Error fetching beneficiaries:', error);
+        logger.error('Error fetching beneficiaries:', error);
         return [];
       }
     },
@@ -221,7 +222,7 @@ const vaultResolver = {
           order: [['created_at', 'DESC']]
         });
       } catch (error) {
-        console.error('Error fetching sub-schedules:', error);
+        logger.error('Error fetching sub-schedules:', error);
         return [];
       }
     },
@@ -248,7 +249,7 @@ const vaultResolver = {
           totalBeneficiaries: beneficiaries.length
         };
       } catch (error) {
-        console.error('Error calculating vault summary:', error);
+        logger.error('Error calculating vault summary:', error);
         return null;
       }
     }

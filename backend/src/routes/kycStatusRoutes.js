@@ -7,6 +7,7 @@ const authService = require("../services/authService");
 const AuditService = require("../services/auditService");
 const sep10Auth = require("../middleware/sep10Auth.middleware");
 const { Op } = require("sequelize");
+const logger = require("../utils/logger");
 
 // GET /api/kyc-status/user/:userAddress
 // Get KYC status for a specific user
@@ -72,7 +73,7 @@ router.get(
         data: resultData,
       });
     } catch (error) {
-      console.error("Error getting KYC status:", error);
+      logger.error("Error getting KYC status:", error);
       res.status(500).json({
         success: false,
         message: error.message,
@@ -152,7 +153,7 @@ router.get(
         },
       });
     } catch (error) {
-      console.error("Error getting expiring KYC statuses:", error);
+      logger.error("Error getting expiring KYC statuses:", error);
       res.status(500).json({
         success: false,
         message: error.message,
@@ -210,7 +211,7 @@ router.get(
         },
       });
     } catch (error) {
-      console.error("Error getting expired KYC statuses:", error);
+      logger.error("Error getting expired KYC statuses:", error);
       res.status(500).json({
         success: false,
         message: error.message,
@@ -233,7 +234,7 @@ router.get(
         data: stats,
       });
     } catch (error) {
-      console.error("Error getting KYC statistics:", error);
+      logger.error("Error getting KYC statistics:", error);
       res.status(500).json({
         success: false,
         message: error.message,
@@ -256,7 +257,7 @@ router.post(
         message: "KYC expiration worker started",
       });
     } catch (error) {
-      console.error("Error starting KYC expiration worker:", error);
+      logger.error("Error starting KYC expiration worker:", error);
       res.status(500).json({
         success: false,
         message: error.message,
@@ -279,7 +280,7 @@ router.post(
         message: "KYC expiration worker stopped",
       });
     } catch (error) {
-      console.error("Error stopping KYC expiration worker:", error);
+      logger.error("Error stopping KYC expiration worker:", error);
       res.status(500).json({
         success: false,
         message: error.message,
@@ -302,7 +303,7 @@ router.post(
         message: "Manual expiration check completed",
       });
     } catch (error) {
-      console.error("Error triggering manual expiration check:", error);
+      logger.error("Error triggering manual expiration check:", error);
       res.status(500).json({
         success: false,
         message: error.message,
@@ -344,7 +345,7 @@ router.post(
         message: `Soft lock applied: ${reason}`,
       });
     } catch (error) {
-      console.error("Error applying soft lock:", error);
+      logger.error("Error applying soft lock:", error);
       res.status(500).json({
         success: false,
         message: error.message,
@@ -379,7 +380,7 @@ router.post(
         message: `Soft lock removed: ${reason}`,
       });
     } catch (error) {
-      console.error("Error removing soft lock:", error);
+      logger.error("Error removing soft lock:", error);
       res.status(500).json({
         success: false,
         message: error.message,
@@ -421,7 +422,7 @@ router.post(
         message: `Risk score updated to ${riskScore}`,
       });
     } catch (error) {
-      console.error("Error updating risk score:", error);
+      logger.error("Error updating risk score:", error);
       res.status(500).json({
         success: false,
         message: error.message,
@@ -444,7 +445,7 @@ router.get(
         data: status,
       });
     } catch (error) {
-      console.error("Error getting worker status:", error);
+      logger.error("Error getting worker status:", error);
       res.status(500).json({
         success: false,
         message: error.message,
@@ -492,7 +493,7 @@ router.get(
         data: reportData,
       });
     } catch (error) {
-      console.error("Error generating compliance report:", error);
+      logger.error("Error generating compliance report:", error);
       res.status(500).json({
         success: false,
         message: error.message,
@@ -524,7 +525,7 @@ async function getRiskDistribution() {
       return acc;
     }, {});
   } catch (error) {
-    console.error("Error getting risk distribution:", error);
+    logger.error("Error getting risk distribution:", error);
     return {};
   }
 }
@@ -679,7 +680,7 @@ router.get(
         },
       });
     } catch (error) {
-      console.error("Error getting pending KYC applications:", error);
+      logger.error("Error getting pending KYC applications:", error);
       res.status(500).json({
         success: false,
         message: error.message,
@@ -780,7 +781,7 @@ router.post(
         },
       });
     } catch (error) {
-      console.error("Error processing KYC approval:", error);
+      logger.error("Error processing KYC approval:", error);
       res.status(500).json({
         success: false,
         message: error.message,
@@ -854,7 +855,7 @@ router.post(
         data: proofResult,
       });
     } catch (error) {
-      console.error("Error generating ZK-proof:", error);
+      logger.error("Error generating ZK-proof:", error);
       res.status(500).json({
         success: false,
         message: error.message || "Failed to generate ZK-proof",

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { RevocationProposal, RevocationSignature, MultiSigConfig, Vault, Beneficiary } = require('../models');
 const { sequelize } = require('../database/connection');
 const crypto = require('crypto');
@@ -69,11 +70,11 @@ class MultiSigRevocationService {
         }
       });
 
-      console.log(`✅ Multi-sig config created for vault ${vaultAddress}`);
+      logger.info(`✅ Multi-sig config created for vault ${vaultAddress}`);
       return config;
 
     } catch (error) {
-      console.error('❌ Error creating multi-sig config:', error);
+      logger.error('❌ Error creating multi-sig config:', error);
       Sentry.captureException(error, {
         tags: { service: 'multi-sig-revocation' },
         extra: { vaultAddress, signers, requiredSignatures, createdBy }
@@ -189,12 +190,12 @@ class MultiSigRevocationService {
         }
       });
 
-      console.log(`✅ Revocation proposal created: ${proposal.id}`);
+      logger.info(`✅ Revocation proposal created: ${proposal.id}`);
       return proposal;
 
     } catch (error) {
       await transaction.rollback();
-      console.error('❌ Error creating revocation proposal:', error);
+      logger.error('❌ Error creating revocation proposal:', error);
       Sentry.captureException(error, {
         tags: { service: 'multi-sig-revocation' },
         extra: { vaultAddress, beneficiaryAddress, amountToRevoke, proposedBy }
@@ -296,13 +297,13 @@ class MultiSigRevocationService {
         // Execute revocation in background
         setImmediate(() => this.executeRevocation(proposalId));
         
-        console.log(`✅ Proposal ${proposalId} approved and queued for execution`);
+        logger.info(`✅ Proposal ${proposalId} approved and queued for execution`);
       } else {
         if (!transaction) {
           await t.commit();
         }
         
-        console.log(`✅ Signature added to proposal ${proposalId}. ${signatureCount}/${proposal.required_signatures} signatures collected`);
+        logger.info(`✅ Signature added to proposal ${proposalId}. ${signatureCount}/${proposal.required_signatures} signatures collected`);
       }
 
       // Log the action
@@ -328,7 +329,7 @@ class MultiSigRevocationService {
       if (!transaction) {
         await t.rollback();
       }
-      console.error('❌ Error adding signature:', error);
+      logger.error('❌ Error adding signature:', error);
       Sentry.captureException(error, {
         tags: { service: 'multi-sig-revocation' },
         extra: { proposalId, signerAddress }
@@ -401,7 +402,7 @@ class MultiSigRevocationService {
         }
       });
 
-      console.log(`✅ Revocation executed: ${transactionHash}`);
+      logger.info(`✅ Revocation executed: ${transactionHash}`);
       return transactionHash;
 
     } catch (error) {
@@ -413,7 +414,7 @@ class MultiSigRevocationService {
         { where: { id: proposalId } }
       );
 
-      console.error('❌ Error executing revocation:', error);
+      logger.error('❌ Error executing revocation:', error);
       Sentry.captureException(error, {
         tags: { service: 'multi-sig-revocation' },
         extra: { proposalId }
@@ -471,28 +472,28 @@ class MultiSigRevocationService {
    */
   async buildAndExecuteRevocationTransaction(proposal, signatures) {
     try {
-      console.log(`🔐 Using HSM Gateway for secure signing of proposal ${proposal.id}`);
+      logger.info(`🔐 Using HSM Gateway for secure signing of proposal ${proposal.id}`);
       
       // Get HSM key IDs for signers from environment or config
       const signingKeyIds = this.getHSMKeyIds(proposal);
       
       if (!signingKeyIds || Object.keys(signingKeyIds).length === 0) {
-        console.log('⚠️  No HSM keys configured, falling back to mock implementation');
+        logger.info('⚠️  No HSM keys configured, falling back to mock implementation');
         return await this.mockTransactionExecution(proposal, signatures);
       }
 
       // Execute using HSM Gateway
       const result = await hsmGatewayService.executeBatchRevokeWithHSM(proposal, signingKeyIds);
       
-      console.log(`✅ HSM-signed transaction executed: ${result.transactionHash}`);
+      logger.info(`✅ HSM-signed transaction executed: ${result.transactionHash}`);
       return result.transactionHash;
 
     } catch (error) {
-      console.error('❌ Error in HSM transaction execution:', error);
+      logger.error('❌ Error in HSM transaction execution:', error);
       
       // Fallback to mock implementation for development/testing
       if (process.env.NODE_ENV === 'development' || process.env.HSM_FALLBACK_ENABLED === 'true') {
-        console.log('⚠️  Falling back to mock implementation due to HSM error');
+        logger.info('⚠️  Falling back to mock implementation due to HSM error');
         return await this.mockTransactionExecution(proposal, signatures);
       }
       
@@ -506,11 +507,11 @@ class MultiSigRevocationService {
   async mockTransactionExecution(proposal, signatures) {
     const mockTxHash = `0x${crypto.randomBytes(32).toString('hex')}`;
     
-    console.log(`🔄 Executing mock revocation transaction for proposal ${proposal.id}`);
-    console.log(`   Vault: ${proposal.vault_address}`);
-    console.log(`   Beneficiary: ${proposal.beneficiary_address}`);
-    console.log(`   Amount: ${proposal.amount_to_revoke}`);
-    console.log(`   Signatures: ${signatures.length}`);
+    logger.info(`🔄 Executing mock revocation transaction for proposal ${proposal.id}`);
+    logger.info(`   Vault: ${proposal.vault_address}`);
+    logger.info(`   Beneficiary: ${proposal.beneficiary_address}`);
+    logger.info(`   Amount: ${proposal.amount_to_revoke}`);
+    logger.info(`   Signatures: ${signatures.length}`);
 
     // Simulate transaction execution delay
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -534,7 +535,7 @@ class MultiSigRevocationService {
         const mapping = JSON.parse(process.env.HSM_KEY_MAPPING);
         Object.assign(keyMapping, mapping);
       } catch (error) {
-        console.error('Error parsing HSM key mapping:', error);
+        logger.error('Error parsing HSM key mapping:', error);
       }
     }
     
@@ -572,7 +573,7 @@ class MultiSigRevocationService {
       return proposal;
 
     } catch (error) {
-      console.error('❌ Error getting proposal:', error);
+      logger.error('❌ Error getting proposal:', error);
       throw error;
     }
   }
@@ -599,7 +600,7 @@ class MultiSigRevocationService {
       return proposals;
 
     } catch (error) {
-      console.error('❌ Error getting pending proposals:', error);
+      logger.error('❌ Error getting pending proposals:', error);
       throw error;
     }
   }
@@ -619,7 +620,7 @@ class MultiSigRevocationService {
       return config;
 
     } catch (error) {
-      console.error('❌ Error getting multi-sig config:', error);
+      logger.error('❌ Error getting multi-sig config:', error);
       throw error;
     }
   }
@@ -652,7 +653,7 @@ class MultiSigRevocationService {
       });
 
     } catch (error) {
-      console.error('❌ Error notifying signers:', error);
+      logger.error('❌ Error notifying signers:', error);
     }
   }
 
@@ -679,7 +680,7 @@ All required signatures were collected and the revocation was successful.`;
       });
 
     } catch (error) {
-      console.error('❌ Error notifying completion:', error);
+      logger.error('❌ Error notifying completion:', error);
     }
   }
 
@@ -703,7 +704,7 @@ The revocation transaction failed. Please investigate the issue.`;
       });
 
     } catch (error) {
-      console.error('❌ Error notifying failure:', error);
+      logger.error('❌ Error notifying failure:', error);
     }
   }
 
@@ -755,7 +756,7 @@ The revocation transaction failed. Please investigate the issue.`;
       };
 
     } catch (error) {
-      console.error('❌ Error getting stats:', error);
+      logger.error('❌ Error getting stats:', error);
       throw error;
     }
   }

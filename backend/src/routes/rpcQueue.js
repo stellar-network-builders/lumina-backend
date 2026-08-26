@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const logger = require('../utils/logger');
 
 /**
  * Get RPC queue service status and statistics
@@ -28,7 +29,7 @@ router.get('/status', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching RPC queue status:', error);
+    logger.error('Error fetching RPC queue status:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch RPC queue status'
@@ -64,7 +65,7 @@ router.get('/dlq/jobs', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching DLQ jobs:', error);
+    logger.error('Error fetching DLQ jobs:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch DLQ jobs'
@@ -101,7 +102,7 @@ router.post('/dlq/:jobId/retry', async (req, res) => {
     });
 
   } catch (error) {
-    console.error(`Error retrying DLQ job ${req.params.jobId}:`, error);
+    logger.error(`Error retrying DLQ job ${req.params.jobId}:`, error);
     res.status(500).json({
       success: false,
       error: 'Failed to retry DLQ job'
@@ -140,7 +141,7 @@ router.delete('/dlq/:jobId', async (req, res) => {
     });
 
   } catch (error) {
-    console.error(`Error deleting DLQ job ${req.params.jobId}:`, error);
+    logger.error(`Error deleting DLQ job ${req.params.jobId}:`, error);
     res.status(500).json({
       success: false,
       error: 'Failed to delete DLQ job'
@@ -171,7 +172,7 @@ router.post('/dlq/clear', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error clearing DLQ:', error);
+    logger.error('Error clearing DLQ:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to clear Dead Letter Queue'
@@ -202,7 +203,7 @@ router.post('/queues/pause', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error pausing RPC queues:', error);
+    logger.error('Error pausing RPC queues:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to pause RPC queues'
@@ -233,7 +234,7 @@ router.post('/queues/resume', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error resuming RPC queues:', error);
+    logger.error('Error resuming RPC queues:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to resume RPC queues'
@@ -282,7 +283,7 @@ router.post('/jobs', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error adding RPC job:', error);
+    logger.error('Error adding RPC job:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to add RPC job'
@@ -321,7 +322,7 @@ router.get('/config', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching RPC queue config:', error);
+    logger.error('Error fetching RPC queue config:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch RPC queue configuration'
@@ -352,7 +353,7 @@ router.post('/stats/reset', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error resetting RPC queue stats:', error);
+    logger.error('Error resetting RPC queue stats:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to reset RPC queue statistics'
@@ -385,7 +386,7 @@ router.get('/health', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error checking RPC queue health:', error);
+    logger.error('Error checking RPC queue health:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to check RPC queue health',
@@ -422,7 +423,7 @@ router.get('/queues/:queueName/stats', async (req, res) => {
     });
 
   } catch (error) {
-    console.error(`Error fetching stats for queue ${req.params.queueName}:`, error);
+    logger.error(`Error fetching stats for queue ${req.params.queueName}:`, error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch queue statistics'
@@ -460,7 +461,7 @@ router.get('/queues/:queueName/failed', async (req, res) => {
     });
 
   } catch (error) {
-    console.error(`Error fetching failed jobs for queue ${req.params.queueName}:`, error);
+    logger.error(`Error fetching failed jobs for queue ${req.params.queueName}:`, error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch failed jobs'

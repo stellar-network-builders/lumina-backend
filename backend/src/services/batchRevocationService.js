@@ -1,5 +1,6 @@
 'use strict';
 
+const logger = require('../utils/logger');
 const { sequelize } = require('../database/connection');
 const { Vault, Beneficiary, SubSchedule } = require('../models');
 const auditLogger = require('./auditLogger');
@@ -117,7 +118,7 @@ class BatchRevocationService {
       };
     } catch (error) {
       await transaction.rollback();
-      console.error('Batch revocation failed:', error);
+      logger.error('Batch revocation failed:', error);
       throw error;
     }
   }
@@ -205,7 +206,7 @@ class BatchRevocationService {
     // In production, this would emit a TeamRevocation event on-chain
     // For now, we log it and create an audit record
     
-    console.log('TeamRevocation Event Emitted:', {
+    logger.info('TeamRevocation Event Emitted:', {
       event: 'TeamRevocation',
       vault_address: vaultAddress,
       admin_address: adminAddress,

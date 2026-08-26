@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const cacheService = require('./cacheService');
 const TracingUtils = require('../tracing/tracingUtils');
 const EventEmitter = require('events');
@@ -85,7 +86,7 @@ class CacheInvalidationService extends EventEmitter {
       async () => {
         const patterns = this.invalidationPatterns.get(eventType);
         if (!patterns) {
-          console.log(`No cache invalidation patterns found for event: ${eventType}`);
+          logger.info(`No cache invalidation patterns found for event: ${eventType}`);
           return true;
         }
 
@@ -95,7 +96,7 @@ class CacheInvalidationService extends EventEmitter {
 
         const failures = results.filter(result => result.status === 'rejected');
         if (failures.length > 0) {
-          console.error(`Cache invalidation failures for ${eventType}:`, failures);
+          logger.error(`Cache invalidation failures for ${eventType}:`, failures);
           return false;
         }
 
@@ -121,7 +122,7 @@ class CacheInvalidationService extends EventEmitter {
       async () => {
         try {
           if (!cacheService.isReady()) {
-            console.log('Cache service not ready, skipping invalidation');
+            logger.info('Cache service not ready, skipping invalidation');
             return true;
           }
 
@@ -133,12 +134,12 @@ class CacheInvalidationService extends EventEmitter {
 
           if (filteredKeys.length > 0) {
             await cacheService.client.del(filteredKeys);
-            console.log(`Invalidated ${filteredKeys.length} cache keys for pattern: ${pattern}`);
+            logger.info(`Invalidated ${filteredKeys.length} cache keys for pattern: ${pattern}`);
           }
 
           return true;
         } catch (error) {
-          console.error(`Error invalidating cache pattern ${pattern}:`, error);
+          logger.error(`Error invalidating cache pattern ${pattern}:`, error);
           throw error;
         }
       }
@@ -244,7 +245,7 @@ class CacheInvalidationService extends EventEmitter {
         }
       };
     } catch (error) {
-      console.error('Error getting cache stats:', error);
+      logger.error('Error getting cache stats:', error);
       return { status: 'error', error: error.message };
     }
   }

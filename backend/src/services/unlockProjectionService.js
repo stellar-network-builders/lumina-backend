@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { Vault, SubSchedule, Token } = require('../models');
 const { Op } = require('sequelize');
 
@@ -90,7 +91,7 @@ class UnlockProjectionService {
         }
       };
     } catch (error) {
-      console.error('Error projecting unlocks:', error);
+      logger.error('Error projecting unlocks:', error);
       throw error;
     }
   }

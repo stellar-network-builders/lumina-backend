@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { sequelize } = require('../database/connection');
 const { SorobanEvent, IndexerState, ClaimsHistory, SubSchedule } = require('../models');
 const { Op } = require('sequelize');
@@ -27,7 +28,7 @@ class LedgerResyncService {
     const startTime = Date.now();
 
     try {
-      console.log(`[${resyncId}] Starting full ledger resync...`);
+      logger.info(`[${resyncId}] Starting full ledger resync...`);
       this.isResyncing = true;
       this.resyncProgress = { resyncId, startTime, status: 'STARTING' };
 
@@ -35,7 +36,7 @@ class LedgerResyncService {
       const networkState = await this.getNetworkState();
       const safeStartSequence = this.calculateSafeStartSequence(networkState);
 
-      console.log(`[${resyncId}] Safe start sequence: ${safeStartSequence}`);
+      logger.info(`[${resyncId}] Safe start sequence: ${safeStartSequence}`);
 
       // Get current database state
       const currentDbState = await this.getCurrentDbState();
@@ -44,7 +45,7 @@ class LedgerResyncService {
       const rollbackPlan = this.calculateRollbackPlan(currentDbState, safeStartSequence);
       
       if (rollbackPlan.needsRollback) {
-        console.log(`[${resyncId}] Rolling back ${rollbackPlan.rollbackDepth} ledgers...`);
+        logger.info(`[${resyncId}] Rolling back ${rollbackPlan.rollbackDepth} ledgers...`);
         await this.executeRollback(rollbackPlan, resyncId);
       }
 
@@ -52,7 +53,7 @@ class LedgerResyncService {
       const resyncResult = await this.executeResync(safeStartSequence, networkState.latestSequence, resyncId);
 
       const duration = Date.now() - startTime;
-      console.log(`[${resyncId}] Resync completed in ${duration}ms`);
+      logger.info(`[${resyncId}] Resync completed in ${duration}ms`);
 
       this.resyncProgress = {
         ...this.resyncProgress,
@@ -69,7 +70,7 @@ class LedgerResyncService {
       };
 
     } catch (error) {
-      console.error(`[${resyncId}] Resync failed:`, error);
+      logger.error(`[${resyncId}] Resync failed:`, error);
       Sentry.captureException(error, {
         tags: { service: this.serviceName, operation: 'full_resync' },
         extra: { resync_id: resyncId }
@@ -202,7 +203,7 @@ class LedgerResyncService {
     const t = await sequelize.transaction();
 
     try {
-      console.log(`[${resyncId}] Executing rollback to ${rollbackPlan.targetSequence}...`);
+      logger.info(`[${resyncId}] Executing rollback to ${rollbackPlan.targetSequence}...`);
 
       let totalDeleted = 0;
 
@@ -216,7 +217,7 @@ class LedgerResyncService {
         transaction: t
       });
       totalDeleted += deletedEvents;
-      console.log(`[${resyncId}] Deleted ${deletedEvents} Soroban events`);
+      logger.info(`[${resyncId}] Deleted ${deletedEvents} Soroban events`);
 
       // Rollback ClaimsHistory
       const deletedClaims = await ClaimsHistory.destroy({
@@ -228,7 +229,7 @@ class LedgerResyncService {
         transaction: t
       });
       totalDeleted += deletedClaims;
-      console.log(`[${resyncId}] Deleted ${deletedClaims} claims history records`);
+      logger.info(`[${resyncId}] Deleted ${deletedClaims} claims history records`);
 
       // Rollback SubSchedules
       const deletedSchedules = await SubSchedule.destroy({
@@ -240,7 +241,7 @@ class LedgerResyncService {
         transaction: t
       });
       totalDeleted += deletedSchedules;
-      console.log(`[${resyncId}] Deleted ${deletedSchedules} sub-schedule records`);
+      logger.info(`[${resyncId}] Deleted ${deletedSchedules} sub-schedule records`);
 
       // Update all indexer states
       for (const [serviceName, currentSequence] of rollbackPlan.affectedTables) {
@@ -255,7 +256,7 @@ class LedgerResyncService {
 
       await t.commit();
 
-      console.log(`[${resyncId}] Rollback completed: ${totalDeleted} total records deleted`);
+      logger.info(`[${resyncId}] Rollback completed: ${totalDeleted} total records deleted`);
 
       return {
         success: true,
@@ -268,7 +269,7 @@ class LedgerResyncService {
 
     } catch (error) {
       await t.rollback();
-      console.error(`[${resyncId}] Rollback failed:`, error);
+      logger.error(`[${resyncId}] Rollback failed:`, error);
       throw error;
     }
   }
@@ -277,7 +278,7 @@ class LedgerResyncService {
    * Execute resync from safe sequence to latest
    */
   async executeResync(startSequence, endSequence, resyncId) {
-    console.log(`[${resyncId}] Starting resync from ${startSequence} to ${endSequence}...`);
+    logger.info(`[${resyncId}] Starting resync from ${startSequence} to ${endSequence}...`);
 
     const rpcUrl = process.env.SOROBAN_RPC_URL || process.env.STELLAR_RPC_URL;
     const rpcClient = new SorobanRpcClient(rpcUrl);
@@ -290,7 +291,7 @@ class LedgerResyncService {
       const batchEndSequence = Math.min(currentSequence + this.resyncBatchSize - 1, endSequence);
 
       try {
-        console.log(`[${resyncId}] Processing batch ${totalBatches + 1}: ledgers ${currentSequence}-${batchEndSequence}`);
+        logger.info(`[${resyncId}] Processing batch ${totalBatches + 1}: ledgers ${currentSequence}-${batchEndSequence}`);
 
         const batchResult = await this.processResyncBatch(
           rpcClient,
@@ -317,7 +318,7 @@ class LedgerResyncService {
         }
 
       } catch (error) {
-        console.error(`[${resyncId}] Batch ${currentSequence}-${batchEndSequence} failed:`, error);
+        logger.error(`[${resyncId}] Batch ${currentSequence}-${batchEndSequence} failed:`, error);
         errors.push({
           batchStart: currentSequence,
           batchEnd: batchEndSequence,
@@ -331,7 +332,7 @@ class LedgerResyncService {
       }
     }
 
-    console.log(`[${resyncId}] Resync completed: ${totalEventsProcessed} events in ${totalBatches} batches`);
+    logger.info(`[${resyncId}] Resync completed: ${totalEventsProcessed} events in ${totalBatches} batches`);
 
     return {
       success: true,
@@ -357,7 +358,7 @@ class LedgerResyncService {
       const relevantEvents = events.events || [];
       let eventsProcessed = 0;
 
-      console.log(`[${resyncId}] Found ${relevantEvents.length} events in ledgers ${startLedger}-${endLedger}`);
+      logger.info(`[${resyncId}] Found ${relevantEvents.length} events in ledgers ${startLedger}-${endLedger}`);
 
       // Process each event
       for (const event of relevantEvents) {
@@ -365,7 +366,7 @@ class LedgerResyncService {
           await this.processResyncEvent(event, resyncId);
           eventsProcessed++;
         } catch (eventError) {
-          console.error(`[${resyncId}] Failed to process event ${event.id}:`, eventError);
+          logger.error(`[${resyncId}] Failed to process event ${event.id}:`, eventError);
           // Continue processing other events
         }
       }
@@ -377,7 +378,7 @@ class LedgerResyncService {
       };
 
     } catch (error) {
-      console.error(`[${resyncId}] Failed to fetch events for ledgers ${startLedger}-${endLedger}:`, error);
+      logger.error(`[${resyncId}] Failed to fetch events for ledgers ${startLedger}-${endLedger}:`, error);
       throw error;
     }
   }
@@ -422,7 +423,7 @@ class LedgerResyncService {
       processed: false // Mark as unprocessed for regular processor to handle
     });
 
-    console.log(`[${resyncId}] Stored ${eventType} event from ledger ${ledgerSequence}`);
+    logger.info(`[${resyncId}] Stored ${eventType} event from ledger ${ledgerSequence}`);
   }
 
   /**
@@ -459,7 +460,7 @@ class LedgerResyncService {
     const startTime = Date.now();
 
     try {
-      console.log(`[${resyncId}] Starting targeted resync from ${startSequence} to ${endSequence}...`);
+      logger.info(`[${resyncId}] Starting targeted resync from ${startSequence} to ${endSequence}...`);
       this.isResyncing = true;
       this.resyncProgress = { resyncId, startTime, status: 'STARTING' };
 
@@ -470,7 +471,7 @@ class LedgerResyncService {
       const resyncResult = await this.executeResync(startSequence, endSequence, resyncId);
 
       const duration = Date.now() - startTime;
-      console.log(`[${resyncId}] Targeted resync completed in ${duration}ms`);
+      logger.info(`[${resyncId}] Targeted resync completed in ${duration}ms`);
 
       this.resyncProgress = {
         ...this.resyncProgress,
@@ -488,7 +489,7 @@ class LedgerResyncService {
       };
 
     } catch (error) {
-      console.error(`[${resyncId}] Targeted resync failed:`, error);
+      logger.error(`[${resyncId}] Targeted resync failed:`, error);
       Sentry.captureException(error, {
         tags: { service: this.serviceName, operation: 'targeted_resync' },
         extra: { resync_id: resyncId, startSequence, endSequence }
@@ -513,7 +514,7 @@ class LedgerResyncService {
     const t = await sequelize.transaction();
 
     try {
-      console.log(`[${resyncId}] Rolling back range ${startSequence}-${endSequence}...`);
+      logger.info(`[${resyncId}] Rolling back range ${startSequence}-${endSequence}...`);
 
       // Delete SorobanEvents in range
       const deletedEvents = await SorobanEvent.destroy({
@@ -547,7 +548,7 @@ class LedgerResyncService {
 
       await t.commit();
 
-      console.log(`[${resyncId}] Range rollback completed: ${deletedEvents} events, ${deletedClaims} claims, ${deletedSchedules} schedules`);
+      logger.info(`[${resyncId}] Range rollback completed: ${deletedEvents} events, ${deletedClaims} claims, ${deletedSchedules} schedules`);
 
       return {
         success: true,
@@ -558,7 +559,7 @@ class LedgerResyncService {
 
     } catch (error) {
       await t.rollback();
-      console.error(`[${resyncId}] Range rollback failed:`, error);
+      logger.error(`[${resyncId}] Range rollback failed:`, error);
       throw error;
     }
   }
@@ -620,7 +621,7 @@ class LedgerResyncService {
       return false;
     }
 
-    console.log('Cancelling ongoing resync...');
+    logger.info('Cancelling ongoing resync...');
     this.isResyncing = false;
     
     if (this.resyncProgress) {

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const axios = require('axios');
 
 let emailService;
@@ -50,13 +51,13 @@ class DeadLetterMonitorService {
     // Unref so the timer never keeps the process alive on its own.
     this.timer = setInterval(() => {
       this.checkAndAlert().catch((err) =>
-        console.error('DLQ monitor check failed:', err.message)
+        logger.error('DLQ monitor check failed:', err.message)
       );
     }, this.intervalMs);
     if (this.timer.unref) {
       this.timer.unref();
     }
-    console.log(`Dead-letter queue monitor started (every ${this.intervalMs}ms)`);
+    logger.info(`Dead-letter queue monitor started (every ${this.intervalMs}ms)`);
   }
 
   stop() {
@@ -106,15 +107,15 @@ class DeadLetterMonitorService {
       deliveries.push(
         emailService
           .sendEmail(this.alertEmail, subject, text, html)
-          .catch((err) => console.error('DLQ email alert failed:', err.message))
+          .catch((err) => logger.error('DLQ email alert failed:', err.message))
       );
     }
 
     if (deliveries.length === 0) {
-      console.warn(
+      logger.warn(
         'DLQ alert raised but no channel configured. Set DLQ_ALERT_WEBHOOK_URL and/or DLQ_ALERT_EMAIL.'
       );
-      console.warn(text);
+      logger.warn(text);
       return { sent: false };
     }
 
@@ -146,7 +147,7 @@ class DeadLetterMonitorService {
       );
       return { channel: 'webhook' };
     } catch (err) {
-      console.error('DLQ webhook alert failed:', err.message);
+      logger.error('DLQ webhook alert failed:', err.message);
       return { channel: 'webhook', error: err.message };
     }
   }

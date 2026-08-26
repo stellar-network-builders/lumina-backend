@@ -7,6 +7,7 @@
 
 const { KycStatus } = require('../models');
 const Sentry = require('@sentry/node');
+const logger = require('../utils/logger');
 
 /**
  * Middleware to check KYC status before allowing claims
@@ -29,13 +30,13 @@ const kycSoftLockMiddleware = async (req, res, next) => {
       });
     }
 
-    console.log(`🔍 Checking KYC status for claim by user: ${userAddress}`);
+    logger.info(`🔍 Checking KYC status for claim by user: ${userAddress}`);
 
     // Get user's KYC status
     const kycStatus = await KycStatus.findByUserAddress(userAddress);
     
     if (!kycStatus) {
-      console.log(`⚠️ No KYC record found for user: ${userAddress}`);
+      logger.info(`⚠️ No KYC record found for user: ${userAddress}`);
       
       // Create pending KYC record and block claim
       await KycStatus.createKycStatus({
@@ -60,14 +61,14 @@ const kycSoftLockMiddleware = async (req, res, next) => {
     // Check compliance status
     const complianceStatus = kycStatus.getComplianceStatus();
     
-    console.log(`📊 KYC compliance status for user ${userAddress}: ${complianceStatus.status}`);
+    logger.info(`📊 KYC compliance status for user ${userAddress}: ${complianceStatus.status}`);
 
     // Log the check for audit purposes
     await kycStatus.addNotification('CLAIM_ATTEMPT', `Claim attempt - Status: ${complianceStatus.status}`);
 
     // If user cannot claim, block the request
     if (!complianceStatus.canClaim) {
-      console.log(`🚫 Claim blocked for user ${userAddress}: ${complianceStatus.message}`);
+      logger.info(`🚫 Claim blocked for user ${userAddress}: ${complianceStatus.message}`);
       
       // Send Sentry alert for compliance violations
       Sentry.captureMessage(`Claim blocked due to KYC compliance - User: ${userAddress}`, {
@@ -104,7 +105,7 @@ const kycSoftLockMiddleware = async (req, res, next) => {
 
     // If KYC is expiring soon, add warning but allow claim
     if (complianceStatus.status === 'EXPIRING_SOON') {
-      console.log(`⚠️ Warning: User ${userAddress} KYC expiring soon`);
+      logger.info(`⚠️ Warning: User ${userAddress} KYC expiring soon`);
       
       // Add warning header to response (will be processed after next())
       req.kycWarning = {
@@ -115,7 +116,7 @@ const kycSoftLockMiddleware = async (req, res, next) => {
     }
 
     // User can proceed with claim
-    console.log(`✅ KYC check passed for user ${userAddress}`);
+    logger.info(`✅ KYC check passed for user ${userAddress}`);
     
     // Attach KYC status to request for downstream use
     req.kycStatus = kycStatus.toJSON();
@@ -124,7 +125,7 @@ const kycSoftLockMiddleware = async (req, res, next) => {
     next();
     
   } catch (error) {
-    console.error('❌ Error in KYC soft-lock middleware:', error);
+    logger.error('❌ Error in KYC soft-lock middleware:', error);
     Sentry.captureException(error, {
       tags: { operation: 'kycSoftLockMiddleware' },
       extra: { userAddress: req.body.user_address, path: req.path }
@@ -163,12 +164,12 @@ const kycAdminMiddleware = async (req, res, next) => {
       return next(); // No target user, proceed
     }
 
-    console.log(`🔍 Admin operation - Checking KYC status for target user: ${targetUserAddress}`);
+    logger.info(`🔍 Admin operation - Checking KYC status for target user: ${targetUserAddress}`);
 
     const kycStatus = await KycStatus.findByUserAddress(targetUserAddress);
     
     if (!kycStatus) {
-      console.log(`⚠️ No KYC record found for target user: ${targetUserAddress}`);
+      logger.info(`⚠️ No KYC record found for target user: ${targetUserAddress}`);
       return next(); // Allow admin operation for users without KYC record
     }
 
@@ -183,7 +184,7 @@ const kycAdminMiddleware = async (req, res, next) => {
     
     // If target user has critical compliance issues, warn admin
     if (complianceStatus.urgency === 'CRITICAL') {
-      console.log(`🚨 Admin operation on user with critical KYC status: ${targetUserAddress}`);
+      logger.info(`🚨 Admin operation on user with critical KYC status: ${targetUserAddress}`);
       
       Sentry.captureMessage(`Admin operation on user with critical KYC status`, {
         level: 'warning',
@@ -203,7 +204,7 @@ const kycAdminMiddleware = async (req, res, next) => {
     next();
     
   } catch (error) {
-    console.error('❌ Error in KYC admin middleware:', error);
+    logger.error('❌ Error in KYC admin middleware:', error);
     Sentry.captureException(error, {
       tags: { operation: 'kycAdminMiddleware' },
       extra: { adminAddress: req.user?.address, path: req.path }
@@ -270,10 +271,10 @@ const kycAuditMiddleware = async (req, res, next) => {
             user_agent: req.get('User-Agent')
           });
           
-          console.log(`📝 KYC audit log created for claim by user ${req.userAddress}`);
+          logger.info(`📝 KYC audit log created for claim by user ${req.userAddress}`);
           
         } catch (error) {
-          console.error('❌ Error creating KYC audit log:', error);
+          logger.error('❌ Error creating KYC audit log:', error);
           // Don't fail the request due to audit logging errors
         }
       }
@@ -312,11 +313,11 @@ const kycPostClaimMiddleware = async (req, res, next) => {
               }
             });
             
-            console.log(`📬 Sent post-claim KYC reminder to user ${req.userAddress}`);
+            logger.info(`📬 Sent post-claim KYC reminder to user ${req.userAddress}`);
           }
           
         } catch (error) {
-          console.error('❌ Error in post-claim KYC middleware:', error);
+          logger.error('❌ Error in post-claim KYC middleware:', error);
         }
       }
     }

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { claimEventEmitter } = require('./indexingService');
 const claimWebhookDispatcherService = require('./claimWebhookDispatcherService');
 
@@ -10,14 +11,14 @@ class ClaimWebhookListenerService {
 
   start() {
     if (this.started) {
-      console.log('Claim webhook listener already started');
+      logger.info('Claim webhook listener already started');
       return;
     }
 
     this.dispatcher.start();
     claimEventEmitter.on('tokensClaimed', this.boundHandler);
     this.started = true;
-    console.log('Claim webhook listener started');
+    logger.info('Claim webhook listener started');
   }
 
   stop() {
@@ -34,7 +35,7 @@ class ClaimWebhookListenerService {
     try {
       await this.dispatcher.enqueueTokensClaimedEvent(claimEvent);
     } catch (error) {
-      console.error('Failed to queue claim webhook event:', error);
+      logger.error('Failed to queue claim webhook event:', error);
     }
   }
 }

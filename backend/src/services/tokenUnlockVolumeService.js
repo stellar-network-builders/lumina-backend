@@ -1,5 +1,6 @@
 'use strict';
 
+const logger = require('../utils/logger');
 const { Vault, SubSchedule, Beneficiary } = require('../models');
 const { sequelize } = require('../database/connection');
 const { Op } = require('sequelize');
@@ -67,7 +68,7 @@ class TokenUnlockVolumeService {
       };
 
     } catch (error) {
-      console.error('Error generating unlock projection:', error);
+      logger.error('Error generating unlock projection:', error);
       throw error;
     }
   }
@@ -558,7 +559,7 @@ class TokenUnlockVolumeService {
       };
 
     } catch (error) {
-      console.error('Error getting current unlock stats:', error);
+      logger.error('Error getting current unlock stats:', error);
       throw error;
     }
   }

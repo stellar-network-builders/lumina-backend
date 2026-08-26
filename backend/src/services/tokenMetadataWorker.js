@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { Token } = require('../models/token');
 const Vault = require('../models/vault');
 const axios = require('axios');
@@ -32,10 +33,10 @@ class TokenMetadataWorker {
               name: meta.name,
               decimals: meta.decimals,
             });
-            console.log(`Token metadata stored for ${address}`);
+            logger.info(`Token metadata stored for ${address}`);
           }
         } catch (err) {
-          console.error(`Failed to fetch/store metadata for ${address}:`, err);
+          logger.error(`Failed to fetch/store metadata for ${address}:`, err);
         }
       }
     }

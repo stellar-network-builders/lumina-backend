@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const redis = require('redis');
 const secretsService = require('./secretsService');
 
@@ -23,9 +24,9 @@ class CacheService {
         redisPassword = redisConfig.password;
         useTls = redisConfig.tls;
         
-        console.log('Redis cache connection initialized with dynamic credentials');
+        logger.info('Redis cache connection initialized with dynamic credentials');
       } catch (error) {
-        console.error('Failed to initialize Redis cache with dynamic credentials, falling back to environment variables:', error);
+        logger.error('Failed to initialize Redis cache with dynamic credentials, falling back to environment variables:', error);
         
         // Fallback to environment variables if secrets service fails
         redisHost = process.env.REDIS_HOST || "localhost";
@@ -53,7 +54,7 @@ class CacheService {
         socket: {
           reconnectStrategy: (retries) => {
             if (retries > 10) {
-              console.error('Redis max reconnection attempts reached');
+              logger.error('Redis max reconnection attempts reached');
               return new Error('Max reconnection attempts reached');
             }
             return Math.min(retries * 100, 3000);
@@ -72,32 +73,32 @@ class CacheService {
       });
 
       this.client.on('error', (err) => {
-        console.error('Redis Client Error:', err);
+        logger.error('Redis Client Error:', err);
         this.isConnected = false;
         // Log TLS-specific errors for debugging
         if (err.message.includes('TLS') || err.message.includes('certificate')) {
-          console.error("Redis TLS Error - Check certificate configuration and REDIS_TLS setting");
+          logger.error("Redis TLS Error - Check certificate configuration and REDIS_TLS setting");
         }
       });
 
       this.client.on('connect', () => {
-        console.log(`Redis client connected (TLS: ${useTls ? 'enabled' : 'disabled'})`);
+        logger.info(`Redis client connected (TLS: ${useTls ? 'enabled' : 'disabled'})`);
         this.isConnected = true;
       });
 
       this.client.on('ready', () => {
-        console.log("Redis client ready - Authentication successful");
+        logger.info("Redis client ready - Authentication successful");
       });
 
       this.client.on('disconnect', () => {
-        console.log('Redis client disconnected');
+        logger.info('Redis client disconnected');
         this.isConnected = false;
       });
 
       await this.client.connect();
       return true;
     } catch (error) {
-      console.error('Failed to connect to Redis:', error);
+      logger.error('Failed to connect to Redis:', error);
       this.isConnected = false;
       return false;
     }
@@ -138,7 +139,7 @@ class CacheService {
       }
       return null;
     } catch (error) {
-      console.error(`Error getting cache key ${key}:`, error);
+      logger.error(`Error getting cache key ${key}:`, error);
       return null;
     }
   }
@@ -160,7 +161,7 @@ class CacheService {
       await this.client.setEx(key, ttl, serializedValue);
       return true;
     } catch (error) {
-      console.error(`Error setting cache key ${key}:`, error);
+      logger.error(`Error setting cache key ${key}:`, error);
       return false;
     }
   }
@@ -179,7 +180,7 @@ class CacheService {
       await this.client.del(key);
       return true;
     } catch (error) {
-      console.error(`Error deleting cache key ${key}:`, error);
+      logger.error(`Error deleting cache key ${key}:`, error);
       return false;
     }
   }
@@ -201,7 +202,7 @@ class CacheService {
       }
       return true;
     } catch (error) {
-      console.error(`Error deleting cache pattern ${pattern}:`, error);
+      logger.error(`Error deleting cache pattern ${pattern}:`, error);
       return false;
     }
   }
@@ -270,10 +271,10 @@ class CacheService {
       if (this.client) {
         await this.client.quit();
         this.isConnected = false;
-        console.log('Redis client disconnected');
+        logger.info('Redis client disconnected');
       }
     } catch (error) {
-      console.error('Error disconnecting from Redis:', error);
+      logger.error('Error disconnecting from Redis:', error);
     }
   }
 }

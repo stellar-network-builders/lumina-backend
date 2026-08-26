@@ -3,6 +3,7 @@ const router = express.Router();
 const authService = require('../services/authService');
 const batchClaimProcessor = require('../services/batchClaimProcessor');
 const AutoClaimConsent = require('../models/autoClaimConsent');
+const logger = require('../utils/logger');
 
 /**
  * @swagger
@@ -110,7 +111,7 @@ router.post('/process', authService.authenticate(), async (req, res) => {
       data: results
     });
   } catch (error) {
-    console.error('Error processing batch claims:', error);
+    logger.error('Error processing batch claims:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -189,7 +190,7 @@ router.post('/consent/enable', authService.authenticate(), async (req, res) => {
       data: consent
     });
   } catch (error) {
-    console.error('Error enabling auto-claim consent:', error);
+    logger.error('Error enabling auto-claim consent:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -239,7 +240,7 @@ router.post('/consent/disable', authService.authenticate(), async (req, res) => 
       message: 'Auto-claim consent disabled'
     });
   } catch (error) {
-    console.error('Error disabling auto-claim consent:', error);
+    logger.error('Error disabling auto-claim consent:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -306,7 +307,7 @@ router.get('/eligibility', authService.authenticate(), async (req, res) => {
       data: eligibility
     });
   } catch (error) {
-    console.error('Error getting batch claim eligibility:', error);
+    logger.error('Error getting batch claim eligibility:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -386,7 +387,7 @@ router.get('/consent/status', authService.authenticate(), async (req, res) => {
       data: consent || { isEnabled: false }
     });
   } catch (error) {
-    console.error('Error getting consent status:', error);
+    logger.error('Error getting consent status:', error);
     res.status(500).json({
       success: false,
       error: error.message

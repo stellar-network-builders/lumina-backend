@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const EventEmitter = require('events');
 const TracingUtils = require('../tracing/tracingUtils');
 
@@ -68,7 +69,7 @@ class CircuitBreaker extends EventEmitter {
         if (this.state === 'OPEN') {
           if (Date.now() >= this.nextAttempt) {
             this._transitionTo('HALF_OPEN', context);
-            console.log(`🔌 Circuit breaker transitioning to HALF_OPEN for ${operationName}`);
+            logger.info(`🔌 Circuit breaker transitioning to HALF_OPEN for ${operationName}`);
           } else {
             throw this._openError(operationName, context);
           }
@@ -134,7 +135,7 @@ class CircuitBreaker extends EventEmitter {
         // fires (resetting state to CLOSED up-front would suppress the event).
         this._clearCounters();
         this._transitionTo('CLOSED', context, { recoveryLatencyMs });
-        console.log(`🔌 Circuit breaker CLOSED for ${context.name || this.name}`);
+        logger.info(`🔌 Circuit breaker CLOSED for ${context.name || this.name}`);
       }
     } else {
       // In CLOSED state, reset failure count on success
@@ -155,11 +156,11 @@ class CircuitBreaker extends EventEmitter {
       this.successCount = 0;
       this.nextAttempt = Date.now() + this.options.resetTimeout;
       this._open(context);
-      console.log(`🔌 Circuit breaker OPEN again for ${context.name || this.name}`);
+      logger.info(`🔌 Circuit breaker OPEN again for ${context.name || this.name}`);
     } else if (this.state === 'CLOSED' && this.failureCount >= this.options.failureThreshold) {
       this.nextAttempt = Date.now() + this.options.resetTimeout;
       this._open(context);
-      console.log(`🔌 Circuit breaker OPEN for ${context.name || this.name} after ${this.failureCount} failures`);
+      logger.info(`🔌 Circuit breaker OPEN for ${context.name || this.name} after ${this.failureCount} failures`);
     }
   }
 
@@ -254,7 +255,7 @@ class CircuitBreaker extends EventEmitter {
     this.trips++;
     this.nextAttempt = Date.now() + this.options.resetTimeout;
     this._transitionTo('OPEN', {});
-    console.log(`🔌 Circuit breaker force OPENED for ${this.name}`);
+    logger.info(`🔌 Circuit breaker force OPENED for ${this.name}`);
   }
 
   /**
@@ -264,7 +265,7 @@ class CircuitBreaker extends EventEmitter {
   forceClose() {
     this._clearCounters();
     this._transitionTo('CLOSED', {});
-    console.log(`🔌 Circuit breaker force CLOSED for ${this.name}`);
+    logger.info(`🔌 Circuit breaker force CLOSED for ${this.name}`);
   }
 }
 

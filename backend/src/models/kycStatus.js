@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../database/connection');
 
@@ -258,7 +259,7 @@ KycStatus.prototype.applySoftLock = async function(reason = 'KYC status expiring
     updated_at: new Date()
   });
   
-  console.log(`Soft-lock applied to user ${this.user_address}: ${reason}`);
+  logger.info(`Soft-lock applied to user ${this.user_address}: ${reason}`);
   return this;
 };
 
@@ -272,7 +273,7 @@ KycStatus.prototype.removeSoftLock = async function(reason = 'KYC status updated
     updated_at: new Date()
   });
   
-  console.log(`Soft-lock removed for user ${this.user_address}: ${reason}`);
+  logger.info(`Soft-lock removed for user ${this.user_address}: ${reason}`);
   return this;
 };
 

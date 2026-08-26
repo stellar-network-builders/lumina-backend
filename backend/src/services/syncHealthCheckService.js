@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { IndexerState } = require('../models');
 const { sequelize } = require('../database/connection');
 const Sentry = require('@sentry/node');
@@ -28,11 +29,11 @@ class SyncHealthCheckService {
       // Check if we have a recent cached result
       if (this.cachedResult && this.lastHealthCheck && 
           (Date.now() - this.lastHealthCheck) < this.cacheTimeout) {
-        console.log('Returning cached health check result');
+        logger.info('Returning cached health check result');
         return this.cachedResult;
       }
 
-      console.log('Performing sync health check...');
+      logger.info('Performing sync health check...');
       
       // Get current Stellar network ledger
       const networkLedger = await this.getCurrentNetworkLedger();
@@ -75,7 +76,7 @@ class SyncHealthCheckService {
       this.lastHealthCheck = Date.now();
 
       // Log health status
-      console.log(`Health check completed: ${healthResult.status} (delta: ${ledgerDelta} ledgers)`);
+      logger.info(`Health check completed: ${healthResult.status} (delta: ${ledgerDelta} ledgers)`);
       
       // Send alert if unhealthy
       if (!isHealthy) {
@@ -85,7 +86,7 @@ class SyncHealthCheckService {
       return healthResult;
 
     } catch (error) {
-      console.error('Critical error in health check:', error);
+      logger.error('Critical error in health check:', error);
       
       // Send critical alert
       await this.sendCriticalHealthAlert(error);
@@ -159,7 +160,7 @@ class SyncHealthCheckService {
       return parseInt(ledger);
 
     } catch (error) {
-      console.error('Error getting current network ledger:', error);
+      logger.error('Error getting current network ledger:', error);
       throw new Error(`Failed to get current network ledger: ${error.message}`);
     }
   }
@@ -175,14 +176,14 @@ class SyncHealthCheckService {
       const indexerState = await IndexerState.findByPk(serviceName);
       
       if (!indexerState) {
-        console.warn('No indexer state found, assuming genesis sync has not started');
+        logger.warn('No indexer state found, assuming genesis sync has not started');
         return 0;
       }
 
       return parseInt(indexerState.last_ingested_ledger);
 
     } catch (error) {
-      console.error('Error getting last synced ledger:', error);
+      logger.error('Error getting last synced ledger:', error);
       throw new Error(`Failed to get last synced ledger: ${error.message}`);
     }
   }
@@ -198,7 +199,7 @@ class SyncHealthCheckService {
       const ledgerIntervalSeconds = 5;
       return ledgerDelta * ledgerIntervalSeconds;
     } catch (error) {
-      console.error('Error estimating sync lag:', error);
+      logger.error('Error estimating sync lag:', error);
       return null;
     }
   }
@@ -222,7 +223,7 @@ class SyncHealthCheckService {
       return detailedStatus;
 
     } catch (error) {
-      console.error('Error getting detailed sync status:', error);
+      logger.error('Error getting detailed sync status:', error);
       throw error;
     }
   }
@@ -241,7 +242,7 @@ class SyncHealthCheckService {
         availableMetrics: ['ledger_delta', 'sync_time', 'error_rate']
       };
     } catch (error) {
-      console.error('Error getting indexer history:', error);
+      logger.error('Error getting indexer history:', error);
       return null;
     }
   }
@@ -268,7 +269,7 @@ class SyncHealthCheckService {
         avgProcessingTime: parseFloat(result[0]?.avg_processing_time || 0)
       };
     } catch (error) {
-      console.error('Error getting performance metrics:', error);
+      logger.error('Error getting performance metrics:', error);
       return null;
     }
   }
@@ -297,7 +298,7 @@ class SyncHealthCheckService {
         nodeVersion: process.version
       };
     } catch (error) {
-      console.error('Error getting system health:', error);
+      logger.error('Error getting system health:', error);
       return null;
     }
   }
@@ -351,7 +352,7 @@ class SyncHealthCheckService {
       });
 
     } catch (error) {
-      console.error('Failed to send unhealthy alert:', error);
+      logger.error('Failed to send unhealthy alert:', error);
     }
   }
 
@@ -384,7 +385,7 @@ class SyncHealthCheckService {
       });
 
     } catch (alertError) {
-      console.error('Failed to send critical health alert:', alertError);
+      logger.error('Failed to send critical health alert:', alertError);
     }
   }
 
@@ -394,7 +395,7 @@ class SyncHealthCheckService {
   clearCache() {
     this.cachedResult = null;
     this.lastHealthCheck = null;
-    console.log('Health check cache cleared');
+    logger.info('Health check cache cleared');
   }
 
   /**
@@ -412,7 +413,7 @@ class SyncHealthCheckService {
       this.stellarRpcUrl = config.stellarRpcUrl;
     }
     
-    console.log('Sync health check configuration updated:', {
+    logger.info('Sync health check configuration updated:', {
       healthyThreshold: this.healthyThreshold,
       cacheTimeout: this.cacheTimeout,
       stellarRpcUrl: this.stellarRpcUrl ? 'configured' : 'not configured'

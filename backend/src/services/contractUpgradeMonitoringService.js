@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { 
   ContractUpgradeProposal, 
   ContractUpgradeAuditLog,
@@ -24,11 +25,11 @@ class ContractUpgradeMonitoringService {
    * Start monitoring contract upgrade operations
    */
   startMonitoring() {
-    console.log('Starting contract upgrade monitoring service...');
+    logger.info('Starting contract upgrade monitoring service...');
     
     // Run monitoring immediately
     this.runMonitoring().catch(error => {
-      console.error('Error in initial monitoring run:', error);
+      logger.error('Error in initial monitoring run:', error);
       Sentry.captureException(error);
     });
 
@@ -37,12 +38,12 @@ class ContractUpgradeMonitoringService {
       try {
         await this.runMonitoring();
       } catch (error) {
-        console.error('Error in monitoring cycle:', error);
+        logger.error('Error in monitoring cycle:', error);
         Sentry.captureException(error);
       }
     }, this.monitoringInterval);
 
-    console.log(`Contract upgrade monitoring started with ${this.monitoringInterval/1000}s interval`);
+    logger.info(`Contract upgrade monitoring started with ${this.monitoringInterval/1000}s interval`);
   }
 
   /**
@@ -52,7 +53,7 @@ class ContractUpgradeMonitoringService {
     if (this.monitoringTimer) {
       clearInterval(this.monitoringTimer);
       this.monitoringTimer = null;
-      console.log('Contract upgrade monitoring stopped');
+      logger.info('Contract upgrade monitoring stopped');
     }
   }
 
@@ -62,7 +63,7 @@ class ContractUpgradeMonitoringService {
   async runMonitoring() {
     try {
       const timestamp = new Date();
-      console.log(`Running contract upgrade monitoring at ${timestamp.toISOString()}`);
+      logger.info(`Running contract upgrade monitoring at ${timestamp.toISOString()}`);
 
       // Check for expiring proposals
       await this.checkExpiringProposals();
@@ -83,7 +84,7 @@ class ContractUpgradeMonitoringService {
       await this.generateMonitoringReport(timestamp);
 
     } catch (error) {
-      console.error('Error in monitoring run:', error);
+      logger.error('Error in monitoring run:', error);
       Sentry.captureException(error);
     }
   }
@@ -131,11 +132,11 @@ class ContractUpgradeMonitoringService {
       }
 
       if (expiringProposals.length > 0) {
-        console.log(`Found ${expiringProposals.length} proposals expiring soon`);
+        logger.info(`Found ${expiringProposals.length} proposals expiring soon`);
       }
 
     } catch (error) {
-      console.error('Error checking expiring proposals:', error);
+      logger.error('Error checking expiring proposals:', error);
       Sentry.captureException(error);
     }
   }
@@ -188,11 +189,11 @@ class ContractUpgradeMonitoringService {
       }
 
       if (expiringSignatures.length > 0) {
-        console.log(`Found ${expiringSignatures.length} signatures expiring soon`);
+        logger.info(`Found ${expiringSignatures.length} signatures expiring soon`);
       }
 
     } catch (error) {
-      console.error('Error checking expiring signatures:', error);
+      logger.error('Error checking expiring signatures:', error);
       Sentry.captureException(error);
     }
   }
@@ -233,7 +234,7 @@ class ContractUpgradeMonitoringService {
       }
 
     } catch (error) {
-      console.error('Error checking failed upgrades:', error);
+      logger.error('Error checking failed upgrades:', error);
       Sentry.captureException(error);
     }
   }
@@ -277,11 +278,11 @@ class ContractUpgradeMonitoringService {
       }
 
       if (stuckProposals.length > 0) {
-        console.log(`Found ${stuckProposals.length} proposals stuck in pending state`);
+        logger.info(`Found ${stuckProposals.length} proposals stuck in pending state`);
       }
 
     } catch (error) {
-      console.error('Error checking stuck proposals:', error);
+      logger.error('Error checking stuck proposals:', error);
       Sentry.captureException(error);
     }
   }
@@ -325,7 +326,7 @@ class ContractUpgradeMonitoringService {
       }
 
     } catch (error) {
-      console.error('Error checking certified build health:', error);
+      logger.error('Error checking certified build health:', error);
       Sentry.captureException(error);
     }
   }
@@ -349,13 +350,13 @@ class ContractUpgradeMonitoringService {
       });
 
       // Log to console
-      console.log('Contract Upgrade Monitoring Report:', {
+      logger.info('Contract Upgrade Monitoring Report:', {
         timestamp: timestamp.toISOString(),
         ...stats
       });
 
     } catch (error) {
-      console.error('Error generating monitoring report:', error);
+      logger.error('Error generating monitoring report:', error);
       Sentry.captureException(error);
     }
   }
@@ -413,7 +414,7 @@ class ContractUpgradeMonitoringService {
       };
 
     } catch (error) {
-      console.error('Error getting monitoring stats:', error);
+      logger.error('Error getting monitoring stats:', error);
       return {};
     }
   }
@@ -436,7 +437,7 @@ class ContractUpgradeMonitoringService {
       });
 
     } catch (error) {
-      console.error('Error sending expiration alert:', error);
+      logger.error('Error sending expiration alert:', error);
     }
   }
 
@@ -457,7 +458,7 @@ class ContractUpgradeMonitoringService {
       });
 
     } catch (error) {
-      console.error('Error sending signature expiration alert:', error);
+      logger.error('Error sending signature expiration alert:', error);
     }
   }
 
@@ -479,7 +480,7 @@ class ContractUpgradeMonitoringService {
       });
 
     } catch (error) {
-      console.error('Error sending failed upgrade alert:', error);
+      logger.error('Error sending failed upgrade alert:', error);
     }
   }
 
@@ -501,7 +502,7 @@ class ContractUpgradeMonitoringService {
       });
 
     } catch (error) {
-      console.error('Error sending stuck proposal alert:', error);
+      logger.error('Error sending stuck proposal alert:', error);
     }
   }
 
@@ -522,7 +523,7 @@ class ContractUpgradeMonitoringService {
       });
 
     } catch (error) {
-      console.error('Error sending certified build alert:', error);
+      logger.error('Error sending certified build alert:', error);
     }
   }
 
@@ -563,7 +564,7 @@ class ContractUpgradeMonitoringService {
       };
 
     } catch (error) {
-      console.error('Error getting monitoring dashboard:', error);
+      logger.error('Error getting monitoring dashboard:', error);
       Sentry.captureException(error);
       throw new Error('Failed to get monitoring dashboard data');
     }
@@ -574,11 +575,11 @@ class ContractUpgradeMonitoringService {
    */
   async forceRunMonitoring() {
     try {
-      console.log('Force running contract upgrade monitoring...');
+      logger.info('Force running contract upgrade monitoring...');
       await this.runMonitoring();
       return { success: true, message: 'Monitoring completed successfully' };
     } catch (error) {
-      console.error('Error in force monitoring run:', error);
+      logger.error('Error in force monitoring run:', error);
       Sentry.captureException(error);
       throw new Error('Force monitoring failed');
     }

@@ -1,5 +1,6 @@
 'use strict';
 
+const logger = require('../utils/logger');
 const { Vault, Beneficiary, SubSchedule } = require('../models');
 const { sequelize } = require('../database/connection');
 const auditLogger = require('./auditLogger');
@@ -177,7 +178,7 @@ class AccountConsolidationService {
       };
 
     } catch (error) {
-      console.error('Error in getConsolidatedView:', error);
+      logger.error('Error in getConsolidatedView:', error);
       throw error;
     }
   }
@@ -294,7 +295,7 @@ class AccountConsolidationService {
 
     } catch (error) {
       await transaction.rollback();
-      console.error('Error in mergeBeneficiaryAddresses:', error);
+      logger.error('Error in mergeBeneficiaryAddresses:', error);
       throw error;
     }
   }

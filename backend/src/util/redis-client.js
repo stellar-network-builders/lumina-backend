@@ -45,7 +45,7 @@ class MockRedis {
   }
 
   async connect() {
-    console.log('Mock Redis connected');
+    logger.info('Mock Redis connected');
   }
 
   on(event, callback) {
@@ -62,7 +62,7 @@ let createClient;
 try {
   createClient = require('redis').createClient;
 } catch (error) {
-  console.log('Redis not available, using mock implementation for testing');
+  logger.info('Redis not available, using mock implementation for testing');
   createClient = () => new MockRedis();
 }
 

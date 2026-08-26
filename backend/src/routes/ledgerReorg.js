@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const logger = require('../utils/logger');
 
 /**
  * Get reorg detector and resync service status
@@ -29,7 +30,7 @@ router.get('/status', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching reorg status:', error);
+    logger.error('Error fetching reorg status:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch reorg status'
@@ -64,7 +65,7 @@ router.post('/check', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error triggering reorg check:', error);
+    logger.error('Error triggering reorg check:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to trigger reorg check'
@@ -98,7 +99,7 @@ router.post('/resync/full', async (req, res) => {
 
     // Start async resync
     sorobanEventPoller.performFullResync().catch(error => {
-      console.error('Background resync failed:', error);
+      logger.error('Background resync failed:', error);
     });
 
     res.json({
@@ -111,7 +112,7 @@ router.post('/resync/full', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error initiating full resync:', error);
+    logger.error('Error initiating full resync:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to initiate full resync'
@@ -161,7 +162,7 @@ router.post('/resync/targeted', async (req, res) => {
 
     // Start async targeted resync
     sorobanEventPoller.performTargetedResync(startSequence, endSequence).catch(error => {
-      console.error('Background targeted resync failed:', error);
+      logger.error('Background targeted resync failed:', error);
     });
 
     res.json({
@@ -176,7 +177,7 @@ router.post('/resync/targeted', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error initiating targeted resync:', error);
+    logger.error('Error initiating targeted resync:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to initiate targeted resync'
@@ -206,7 +207,7 @@ router.get('/resync/progress', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching resync progress:', error);
+    logger.error('Error fetching resync progress:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch resync progress'
@@ -237,7 +238,7 @@ router.post('/resync/cancel', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error cancelling resync:', error);
+    logger.error('Error cancelling resync:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to cancel resync'
@@ -267,7 +268,7 @@ router.get('/integrity', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error validating ledger integrity:', error);
+    logger.error('Error validating ledger integrity:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to validate ledger integrity'
@@ -311,7 +312,7 @@ router.get('/config', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching reorg config:', error);
+    logger.error('Error fetching reorg config:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch reorg configuration'
@@ -345,7 +346,7 @@ router.get('/issues', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching recent issues:', error);
+    logger.error('Error fetching recent issues:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch recent issues'
@@ -379,7 +380,7 @@ router.get('/ledger-cache', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching ledger cache info:', error);
+    logger.error('Error fetching ledger cache info:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch ledger cache information'
@@ -445,7 +446,7 @@ router.post('/rollback/:sequence', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error performing manual rollback:', error);
+    logger.error('Error performing manual rollback:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to perform manual rollback'

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const crypto = require('crypto');
 const { IdempotencyKey } = require('../models');
 const { Op } = require('sequelize');
@@ -61,7 +62,7 @@ class IdempotencyKeyService {
 
       return record;
     } catch (error) {
-      console.error('Error checking idempotency key:', error);
+      logger.error('Error checking idempotency key:', error);
       throw error;
     }
   }
@@ -103,7 +104,7 @@ class IdempotencyKeyService {
 
       return record;
     } catch (error) {
-      console.error('Error creating idempotency key:', error);
+      logger.error('Error creating idempotency key:', error);
       throw error;
     }
   }
@@ -131,7 +132,7 @@ class IdempotencyKeyService {
 
       return affectedCount > 0;
     } catch (error) {
-      console.error('Error marking idempotency key as processing:', error);
+      logger.error('Error marking idempotency key as processing:', error);
       throw error;
     }
   }
@@ -159,7 +160,7 @@ class IdempotencyKeyService {
 
       return affectedCount > 0;
     } catch (error) {
-      console.error('Error marking idempotency key as completed:', error);
+      logger.error('Error marking idempotency key as completed:', error);
       throw error;
     }
   }
@@ -185,7 +186,7 @@ class IdempotencyKeyService {
 
       return affectedCount > 0;
     } catch (error) {
-      console.error('Error marking idempotency key as failed:', error);
+      logger.error('Error marking idempotency key as failed:', error);
       throw error;
     }
   }
@@ -205,12 +206,12 @@ class IdempotencyKeyService {
       });
 
       if (deletedCount > 0) {
-        console.log(`Cleaned up ${deletedCount} expired idempotency keys`);
+        logger.info(`Cleaned up ${deletedCount} expired idempotency keys`);
       }
 
       return deletedCount;
     } catch (error) {
-      console.error('Error cleaning up expired idempotency keys:', error);
+      logger.error('Error cleaning up expired idempotency keys:', error);
       throw error;
     }
   }
@@ -248,7 +249,7 @@ class IdempotencyKeyService {
         }, {}),
       };
     } catch (error) {
-      console.error('Error getting idempotency key statistics:', error);
+      logger.error('Error getting idempotency key statistics:', error);
       throw error;
     }
   }
@@ -329,7 +330,7 @@ class IdempotencyKeyService {
         throw error;
       }
     } catch (error) {
-      console.error('Error executing with idempotency:', error);
+      logger.error('Error executing with idempotency:', error);
       throw error;
     }
   }

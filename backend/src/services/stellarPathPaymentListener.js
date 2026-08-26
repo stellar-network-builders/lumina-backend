@@ -1,4 +1,5 @@
 // stellar-sdk v11 replaced the old top-level `Server` with `Horizon.Server`.
+const logger = require('../utils/logger');
 const { Horizon, Networks, TransactionBuilder, Operation } = require('stellar-sdk');
 const { sequelize } = require('../database/connection');
 const { ConversionEvent, ClaimsHistory } = require('../models');
@@ -28,7 +29,7 @@ class StellarPathPaymentListener extends EventEmitter {
    */
   async start() {
     if (this.isListening) {
-      console.log('Path payment listener is already running');
+      logger.info('Path payment listener is already running');
       return;
     }
 
@@ -36,13 +37,13 @@ class StellarPathPaymentListener extends EventEmitter {
       // Get the last processed ledger from the database
       await this.getLastProcessedLedger();
       
-      console.log(`Starting Stellar path payment listener from ledger ${this.lastLedger}`);
+      logger.info(`Starting Stellar path payment listener from ledger ${this.lastLedger}`);
       this.isListening = true;
       
       // Start listening for new transactions
       await this.listenForPayments();
     } catch (error) {
-      console.error('Failed to start path payment listener:', error);
+      logger.error('Failed to start path payment listener:', error);
       this.isListening = false;
       throw error;
     }
@@ -53,7 +54,7 @@ class StellarPathPaymentListener extends EventEmitter {
    */
   async stop() {
     this.isListening = false;
-    console.log('Stellar path payment listener stopped');
+    logger.info('Stellar path payment listener stopped');
   }
 
   /**
@@ -77,7 +78,7 @@ class StellarPathPaymentListener extends EventEmitter {
         this.cursor = 'now';
       }
     } catch (error) {
-      console.error('Error getting last processed ledger:', error);
+      logger.error('Error getting last processed ledger:', error);
       this.lastLedger = 0;
       this.cursor = 'now';
     }
@@ -89,7 +90,7 @@ class StellarPathPaymentListener extends EventEmitter {
   async listenForPayments() {
     while (this.isListening) {
       try {
-        console.log(`Fetching transactions from cursor: ${this.cursor}`);
+        logger.info(`Fetching transactions from cursor: ${this.cursor}`);
         
         const txStream = this.server.transactions()
           .cursor(this.cursor)
@@ -112,7 +113,7 @@ class StellarPathPaymentListener extends EventEmitter {
         await this.sleep(1000);
         
       } catch (error) {
-        console.error('Error in payment listener:', error);
+        logger.error('Error in payment listener:', error);
         await this.handleError(error);
       }
     }
@@ -140,7 +141,7 @@ class StellarPathPaymentListener extends EventEmitter {
         }
       }
     } catch (error) {
-      console.error(`Error processing transaction ${tx.hash}:`, error);
+      logger.error(`Error processing transaction ${tx.hash}:`, error);
     }
   }
 
@@ -230,11 +231,11 @@ class StellarPathPaymentListener extends EventEmitter {
         timestamp: transaction.created_at
       });
 
-      console.log(`Processed path payment: ${operation.source_account} swapped ${operation.source_amount} ${sourceAsset.code} for ${operation.destination_amount} ${destinationAsset.code}`);
+      logger.info(`Processed path payment: ${operation.source_account} swapped ${operation.source_amount} ${sourceAsset.code} for ${operation.destination_amount} ${destinationAsset.code}`);
 
     } catch (error) {
       await t.rollback();
-      console.error('Error processing path payment:', error);
+      logger.error('Error processing path payment:', error);
       throw error;
     }
   }
@@ -262,7 +263,7 @@ class StellarPathPaymentListener extends EventEmitter {
 
       return claim;
     } catch (error) {
-      console.error('Error finding associated claim:', error);
+      logger.error('Error finding associated claim:', error);
       return null;
     }
   }
@@ -324,7 +325,7 @@ class StellarPathPaymentListener extends EventEmitter {
       // This is a placeholder - implement based on your price oracle
       return null;
     } catch (error) {
-      console.error('Error getting USD exchange rate:', error);
+      logger.error('Error getting USD exchange rate:', error);
       return null;
     }
   }
@@ -343,7 +344,7 @@ class StellarPathPaymentListener extends EventEmitter {
       if (amountFloat >= 1000) return 'fair';
       return 'poor';
     } catch (error) {
-      console.error('Error assessing data quality:', error);
+      logger.error('Error assessing data quality:', error);
       return 'fair';
     }
   }
@@ -355,13 +356,13 @@ class StellarPathPaymentListener extends EventEmitter {
     this.retryCount++;
     
     if (this.retryCount >= this.maxRetries) {
-      console.error('Max retries reached, stopping listener');
+      logger.error('Max retries reached, stopping listener');
       await this.stop();
       this.emit('error', error);
       return;
     }
 
-    console.log(`Retrying in ${this.retryDelay / 1000} seconds... (attempt ${this.retryCount}/${this.maxRetries})`);
+    logger.info(`Retrying in ${this.retryDelay / 1000} seconds... (attempt ${this.retryCount}/${this.maxRetries})`);
     await this.sleep(this.retryDelay);
     
     // Exponential backoff

@@ -5,6 +5,7 @@
  * for both static and dynamic tokens.
  */
 
+const logger = require('../utils/logger');
 const BalanceTracker = require('./balanceTracker');
 const BalanceInfo = require('../models/BalanceInfo');
 const { Vault, SubSchedule, Beneficiary } = require('../models');
@@ -50,7 +51,7 @@ class VaultService {
           vault.address
         );
       } catch (error) {
-        console.error(`Failed to query actual balance for vault ${vaultId}:`, error);
+        logger.error(`Failed to query actual balance for vault ${vaultId}:`, error);
         throw error;
       }
 

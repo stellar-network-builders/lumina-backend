@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { sequelize } = require('../database/connection');
 const axios = require('axios');
 const crypto = require('crypto');
@@ -44,7 +45,7 @@ async function validateNetworkOnStartup() {
       }
     } catch (horizonError) {
       // After retries, this is a more serious warning.
-      console.warn(`Warning: Could not fetch network details from RPC URL (${rpcUrl}) after multiple attempts: ${horizonError.message}`);
+      logger.warn(`Warning: Could not fetch network details from RPC URL (${rpcUrl}) after multiple attempts: ${horizonError.message}`);
     }
   }
 
@@ -82,13 +83,13 @@ async function validateNetworkOnStartup() {
       `, {
         replacements: { passphrase: envPassphrase, genesisHash }
       });
-      console.log(`[Network Validation] Initialized database with network: ${envPassphrase}`);
+      logger.info(`[Network Validation] Initialized database with network: ${envPassphrase}`);
     }
   } catch (error) {
     if (error.message && error.message.includes('DB Network Mismatch')) {
       throw error; // Rethrow fatal mismatch errors immediately
     }
-    console.warn('[Network Validation] Could not validate database network configuration:', error.message || error);
+    logger.warn('[Network Validation] Could not validate database network configuration:', error.message || error);
   }
 }
 

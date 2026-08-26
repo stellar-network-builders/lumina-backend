@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const CircuitBreaker = require('./circuitBreaker');
 const TracingUtils = require('../tracing/tracingUtils');
 const EventEmitter = require('events');
@@ -59,7 +60,7 @@ class ExternalServiceManager extends EventEmitter {
         timestamp: new Date().toISOString()
       });
       
-      console.log(`🔌 Circuit breaker for ${serviceName} changed to ${newState}`);
+      logger.info(`🔌 Circuit breaker for ${serviceName} changed to ${newState}`);
     });
 
     circuitBreaker.on('circuitOpened', (data) => {
@@ -69,11 +70,11 @@ class ExternalServiceManager extends EventEmitter {
         timestamp: new Date().toISOString()
       });
       
-      console.log(`🚨 Circuit breaker OPENED for ${serviceName} after ${data.failureCount} failures`);
+      logger.info(`🚨 Circuit breaker OPENED for ${serviceName} after ${data.failureCount} failures`);
     });
 
     this.circuitBreakers.set(serviceName, circuitBreaker);
-    console.log(`🔌 Registered circuit breaker for service: ${serviceName}`);
+    logger.info(`🔌 Registered circuit breaker for service: ${serviceName}`);
   }
 
   /**
@@ -88,7 +89,7 @@ class ExternalServiceManager extends EventEmitter {
     const circuitBreaker = this.circuitBreakers.get(serviceName);
     
     if (!circuitBreaker) {
-      console.warn(`⚠️ No circuit breaker found for service: ${serviceName}. Executing without protection.`);
+      logger.warn(`⚠️ No circuit breaker found for service: ${serviceName}. Executing without protection.`);
       return await operation();
     }
 
@@ -104,7 +105,7 @@ class ExternalServiceManager extends EventEmitter {
         const fallback = fallbackData || this.getFallbackData(serviceName, context);
         
         if (fallback !== null) {
-          console.log(`🔄 Using fallback data for ${serviceName} due to open circuit`);
+          logger.info(`🔄 Using fallback data for ${serviceName} due to open circuit`);
           this.emit('fallbackUsed', {
             serviceName,
             fallbackData: fallback,
@@ -167,7 +168,7 @@ class ExternalServiceManager extends EventEmitter {
     const circuitBreaker = this.circuitBreakers.get(serviceName);
     if (circuitBreaker) {
       circuitBreaker.reset();
-      console.log(`🔌 Reset circuit breaker for service: ${serviceName}`);
+      logger.info(`🔌 Reset circuit breaker for service: ${serviceName}`);
     }
   }
 
@@ -178,7 +179,7 @@ class ExternalServiceManager extends EventEmitter {
     for (const [serviceName, circuitBreaker] of this.circuitBreakers) {
       circuitBreaker.reset();
     }
-    console.log('🔌 Reset all circuit breakers');
+    logger.info('🔌 Reset all circuit breakers');
   }
 
   /**

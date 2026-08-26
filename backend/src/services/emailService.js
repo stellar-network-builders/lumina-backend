@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const nodemailer = require("nodemailer");
 const { Beneficiary } = require("../models");
 const idempotencyKeyService = require("./idempotencyKeyService");
@@ -25,7 +26,7 @@ class EmailService {
   async sendEmail(to, subject, text, html) {
     try {
       if (!to) {
-        console.warn(
+        logger.warn(
           "No recipient email provided, skipping email notification",
         );
         return false;
@@ -37,14 +38,14 @@ class EmailService {
       });
 
       if (beneficiary && !beneficiary.email_valid) {
-        console.warn(
+        logger.warn(
           `Email ${to} is marked as invalid (bounced), skipping email notification`,
         );
         return false;
       }
 
       if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-        console.warn("Email credentials not set, skipping email notification");
+        logger.warn("Email credentials not set, skipping email notification");
         return false;
       }
 
@@ -82,13 +83,13 @@ class EmailService {
       );
 
       if (result.success) {
-        console.log("Email sent: %s%s", result.responseBody, result.fromCache ? ' (from cache)' : '');
+        logger.info("Email sent: %s%s", result.responseBody, result.fromCache ? ' (from cache)' : '');
         return true;
       }
 
       return false;
     } catch (error) {
-      console.error("Error sending email:", error.message);
+      logger.error("Error sending email:", error.message);
       return false;
     }
   }

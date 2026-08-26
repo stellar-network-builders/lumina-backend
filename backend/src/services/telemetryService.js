@@ -1,4 +1,5 @@
 // src/services/telemetryService.js
+const logger = require('../utils/logger');
 const { Resource } = require('@opentelemetry/resources');
 const { SemanticResourceAttributes } = require('@opentelemetry/semantic-conventions');
 const { NodeSDK } = require('@opentelemetry/sdk-node');
@@ -25,9 +26,9 @@ const initTelemetry = () => {
 
   try {
     sdk.start();
-    console.log(`✅ OpenTelemetry SDK started successfully for service: ${OTEL_CONFIG.serviceName}`);
+    logger.info(`✅ OpenTelemetry SDK started successfully for service: ${OTEL_CONFIG.serviceName}`);
   } catch (error) {
-    console.error('❌ Failed to initialize OpenTelemetry SDK:', error);
+    logger.error('❌ Failed to initialize OpenTelemetry SDK:', error);
   }
 
   tracer = require('@opentelemetry/api').trace.getTracer('vesting-vault-api');

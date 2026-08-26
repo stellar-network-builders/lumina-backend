@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { getDatabaseConnection, checkReplicaLag } = require('../database/connection');
 
 /**
@@ -36,7 +37,7 @@ class DatabaseRouter {
 
     // If replica lag exceeds threshold, route reads to master
     if (operation === 'read' && this.currentLag > this.lagThreshold) {
-      console.warn(`Replica lag ${this.currentLag} bytes exceeds threshold ${this.lagThreshold}, routing read to master`);
+      logger.warn(`Replica lag ${this.currentLag} bytes exceeds threshold ${this.lagThreshold}, routing read to master`);
       return getDatabaseConnection('write');
     }
 

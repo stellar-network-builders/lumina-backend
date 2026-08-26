@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const Sentry = require('@sentry/node');
 
 class HSMGatewayService {
@@ -14,7 +15,7 @@ class HSMGatewayService {
       // For now, return mock transaction hash
       const mockTxHash = `0x${require('crypto').randomBytes(32).toString('hex')}`;
       
-      console.log(`✅ HSM Gateway: Batch revoke executed for proposal ${proposal.id}`);
+      logger.info(`✅ HSM Gateway: Batch revoke executed for proposal ${proposal.id}`);
       
       return {
         transactionHash: mockTxHash,
@@ -22,7 +23,7 @@ class HSMGatewayService {
       };
       
     } catch (error) {
-      console.error('❌ HSM Gateway error:', error);
+      logger.error('❌ HSM Gateway error:', error);
       Sentry.captureException(error, {
         tags: { service: 'hsm-gateway' },
         extra: { proposalId: proposal?.id }
@@ -37,10 +38,10 @@ class HSMGatewayService {
   async verifyKeyAvailability(keyId) {
     try {
       // In production: Check HSM key status
-      console.log(`🔐 Verifying HSM key: ${keyId}`);
+      logger.info(`🔐 Verifying HSM key: ${keyId}`);
       return true;
     } catch (error) {
-      console.error(`❌ HSM key verification failed: ${keyId}`, error);
+      logger.error(`❌ HSM key verification failed: ${keyId}`, error);
       return false;
     }
   }

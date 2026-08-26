@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const cron = require('node-cron');
 const GDPRComplianceService = require('../services/gdprComplianceService');
 
@@ -13,24 +14,24 @@ class GDPRComplianceJob {
    */
   start() {
     if (this.job) {
-      console.log('GDPR compliance job is already running');
+      logger.info('GDPR compliance job is already running');
       return;
     }
 
     // Schedule: Daily at 2:00 AM
     this.job = cron.schedule('0 2 * * *', async () => {
       if (this.isRunning) {
-        console.log('GDPR compliance job is already running, skipping...');
+        logger.info('GDPR compliance job is already running, skipping...');
         return;
       }
 
       this.isRunning = true;
       try {
-        console.log('🚀 Starting scheduled GDPR compliance job...');
+        logger.info('🚀 Starting scheduled GDPR compliance job...');
         const results = await this.gdprService.runGDPRComplianceCheck();
-        console.log('✅ GDPR compliance job completed successfully', results);
+        logger.info('✅ GDPR compliance job completed successfully', results);
       } catch (error) {
-        console.error('❌ GDPR compliance job failed:', error);
+        logger.error('❌ GDPR compliance job failed:', error);
       } finally {
         this.isRunning = false;
       }
@@ -39,7 +40,7 @@ class GDPRComplianceJob {
     });
 
     this.job.start();
-    console.log('🔄 GDPR compliance cron job scheduled (daily at 2:00 AM)');
+    logger.info('🔄 GDPR compliance cron job scheduled (daily at 2:00 AM)');
   }
 
   /**
@@ -49,7 +50,7 @@ class GDPRComplianceJob {
     if (this.job) {
       this.job.stop();
       this.job = null;
-      console.log('🛑 GDPR compliance cron job stopped');
+      logger.info('🛑 GDPR compliance cron job stopped');
     }
   }
 
@@ -64,9 +65,9 @@ class GDPRComplianceJob {
 
     this.isRunning = true;
     try {
-      console.log('🔧 Running GDPR compliance check manually...');
+      logger.info('🔧 Running GDPR compliance check manually...');
       const results = await this.gdprService.runGDPRComplianceCheck();
-      console.log('✅ Manual GDPR compliance check completed', results);
+      logger.info('✅ Manual GDPR compliance check completed', results);
       return results;
     } finally {
       this.isRunning = false;

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const vault = require('node-vault');
 const { SecretsManagerClient, GetSecretValueCommand } = require('@aws-sdk/client-secrets-manager');
 
@@ -19,22 +20,22 @@ class SecretsService {
       // Try HashiCorp Vault first
       if (process.env.VAULT_ENABLED === 'true') {
         await this.initializeVault();
-        console.log('HashiCorp Vault initialized successfully');
+        logger.info('HashiCorp Vault initialized successfully');
       } 
       // Fallback to AWS Secrets Manager
       else if (process.env.AWS_SECRETS_MANAGER_ENABLED === 'true') {
         await this.initializeAWSSecretsManager();
-        console.log('AWS Secrets Manager initialized successfully');
+        logger.info('AWS Secrets Manager initialized successfully');
       } 
       // Local development fallback with environment variables
       else {
-        console.log('Using environment variables for secrets (development mode)');
+        logger.info('Using environment variables for secrets (development mode)');
       }
 
       this.initialized = true;
       return true;
     } catch (error) {
-      console.error('Failed to initialize secrets service:', error);
+      logger.error('Failed to initialize secrets service:', error);
       throw error;
     }
   }
@@ -61,7 +62,7 @@ class SecretsService {
     try {
       // Test Vault connection
       await this.vaultClient.health();
-      console.log('Vault connection established');
+      logger.info('Vault connection established');
 
       // If role is specified, try to authenticate with AppRole
       if (vaultRole && !vaultToken) {
@@ -91,7 +92,7 @@ class SecretsService {
       });
 
       this.vaultClient.token = result.auth.client_token;
-      console.log('Vault AppRole authentication successful');
+      logger.info('Vault AppRole authentication successful');
     } catch (error) {
       throw new Error(`Vault AppRole authentication failed: ${error.message}`);
     }
@@ -115,7 +116,7 @@ class SecretsService {
       await this.secretsManagerClient.send(command).catch(() => {
         // Expected to fail for test connection, but validates configuration
       });
-      console.log('AWS Secrets Manager connection established');
+      logger.info('AWS Secrets Manager connection established');
     } catch (error) {
       throw new Error(`Failed to connect to AWS Secrets Manager: ${error.message}`);
     }
@@ -160,12 +161,12 @@ class SecretsService {
       return secret;
 
     } catch (error) {
-      console.error(`Failed to get secret ${secretPath}:`, error);
+      logger.error(`Failed to get secret ${secretPath}:`, error);
       
       // Try environment variables as ultimate fallback
       const envSecret = this.getEnvironmentSecret(secretPath);
       if (envSecret) {
-        console.log(`Using environment variable fallback for ${secretPath}`);
+        logger.info(`Using environment variable fallback for ${secretPath}`);
         this.setCachedSecret(cacheKey, envSecret);
         return envSecret;
       }

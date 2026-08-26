@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { TicketType } = require('../models');
 const { sequelize } = require('../models');
 
@@ -51,7 +52,7 @@ class TicketTypesService {
       }
       
       // Wrap other errors
-      console.error('Error reserving tickets:', error);
+      logger.error('Error reserving tickets:', error);
       throw new Error(`Failed to reserve tickets: ${error.message}`);
     }
   }
@@ -156,7 +157,7 @@ class TicketTypesService {
       }
       
       // Wrap other errors
-      console.error('Error releasing tickets:', error);
+      logger.error('Error releasing tickets:', error);
       throw new Error(`Failed to release tickets: ${error.message}`);
     }
   }

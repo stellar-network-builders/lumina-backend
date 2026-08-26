@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const models = require('../../models');
 
 export const organizationResolver = {
@@ -9,7 +10,7 @@ export const organizationResolver = {
         });
         return org;
       } catch (error) {
-        console.error('Error fetching organization:', error);
+        logger.error('Error fetching organization:', error);
         throw new Error(`Failed to fetch organization: ${error.message}`);
       }
     },
@@ -22,7 +23,7 @@ export const organizationResolver = {
         });
         return org;
       } catch (error) {
-        console.error('Error fetching organization by admin:', error);
+        logger.error('Error fetching organization by admin:', error);
         throw new Error(`Failed to fetch organization: ${error.message}`);
       }
     },
@@ -50,7 +51,7 @@ export const organizationResolver = {
         });
         return orgs;
       } catch (error) {
-        console.error('Error fetching organizations:', error);
+        logger.error('Error fetching organizations:', error);
         throw new Error(`Failed to fetch organizations: ${error.message}`);
       }
     },
@@ -71,7 +72,7 @@ export const organizationResolver = {
           order: [['created_at', 'DESC']],
         });
       } catch (error) {
-        console.error('Error fetching vaults for organization:', error);
+        logger.error('Error fetching vaults for organization:', error);
         return [];
       }
     },

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { ClaimsHistory, Organization, Token } = require('../models');
 const { Op } = require('sequelize');
 const cacheService = require('./cacheService');
@@ -63,7 +64,7 @@ class AccountingExportService {
       return csvContent;
 
     } catch (error) {
-      console.error('Error generating Xero export:', error);
+      logger.error('Error generating Xero export:', error);
       throw error;
     }
   }
@@ -127,7 +128,7 @@ class AccountingExportService {
       return csvContent;
 
     } catch (error) {
-      console.error('Error generating QuickBooks export:', error);
+      logger.error('Error generating QuickBooks export:', error);
       throw error;
     }
   }
@@ -283,7 +284,7 @@ class AccountingExportService {
       };
 
     } catch (error) {
-      console.error('Error getting export summary:', error);
+      logger.error('Error getting export summary:', error);
       throw error;
     }
   }
@@ -338,9 +339,9 @@ class AccountingExportService {
       // Clear deduplication cache for accounting export operations
       await requestDeduplicationMiddleware.clearOperationCache('accounting_export');
       
-      console.log(`[AccountingExport] Export cache invalidated for organization: ${organizationId}`);
+      logger.info(`[AccountingExport] Export cache invalidated for organization: ${organizationId}`);
     } catch (error) {
-      console.error('Error invalidating accounting export cache:', error);
+      logger.error('Error invalidating accounting export cache:', error);
     }
   }
 

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const partnerManagementService = require('../services/partnerManagementService');
 const PartnerUsageTracking = require('../models/partnerUsageTracking');
 
@@ -71,7 +72,7 @@ async function partnerRateLimitMiddleware(req, res, next) {
 
     next();
   } catch (error) {
-    console.error('Error in partner rate limit middleware:', error);
+    logger.error('Error in partner rate limit middleware:', error);
     next();
   }
 }
@@ -109,7 +110,7 @@ async function trackPartnerRequest(req, res) {
 
       await partnerManagementService.trackRequest(requestData);
     } catch (error) {
-      console.error('Error tracking partner request:', error);
+      logger.error('Error tracking partner request:', error);
     }
   });
 }

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { AdminAuditLog } = require('../models');
 
 class AuditService {
@@ -20,9 +21,9 @@ class AuditService {
         resource_id: resourceId,
         timestamp: new Date()
       });
-      console.log(`[AuditLog] ${action} by ${adminPubkey} logged successfully.`);
+      logger.info(`[AuditLog] ${action} by ${adminPubkey} logged successfully.`);
     } catch (error) {
-      console.error(`[AuditLog] Failed to log action ${action}:`, error);
+      logger.error(`[AuditLog] Failed to log action ${action}:`, error);
       // We don't want to fail the main action if audit logging fails, 
       // but in a production security context, we might want to throw or alert.
     }

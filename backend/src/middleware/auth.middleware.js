@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { Organization, Admin } = require('../models');
 const auditLogger = require('../services/auditLogger');
+const logger = require('../utils/logger');
 
 /**
  * Authentication middleware for admin operations
@@ -59,7 +60,7 @@ const authenticateAdmin = async (req, res, next) => {
     next();
 
   } catch (error) {
-    console.error('Authentication error:', error);
+    logger.error('Authentication error:', error);
     
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({
@@ -121,7 +122,7 @@ const verifyAdminStatus = async (address) => {
     return !!org;
 
   } catch (error) {
-    console.error('Error verifying admin status:', error);
+    logger.error('Error verifying admin status:', error);
     return false;
   }
 };
@@ -201,7 +202,7 @@ const hsmSecurityMiddleware = async (req, res, next) => {
     next();
 
   } catch (error) {
-    console.error('HSM security middleware error:', error);
+    logger.error('HSM security middleware error:', error);
     return res.status(500).json({
       success: false,
       error: 'Security validation failed'
@@ -264,7 +265,7 @@ const validateHSMOperation = (operationType) => {
       next();
 
     } catch (error) {
-      console.error('HSM operation validation error:', error);
+      logger.error('HSM operation validation error:', error);
       return res.status(500).json({
         success: false,
         error: 'Operation validation failed'

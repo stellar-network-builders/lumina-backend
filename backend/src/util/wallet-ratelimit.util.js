@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { createClient } = require("./redis-client");
 const secretsService = require("../services/secretsService");
 
@@ -17,9 +18,9 @@ const initializeRedisClient = async () => {
       redisPassword = redisConfig.password;
       useTls = redisConfig.tls;
       
-      console.log('Redis connection initialized with dynamic credentials');
+      logger.info('Redis connection initialized with dynamic credentials');
     } catch (error) {
-      console.error('Failed to initialize Redis with dynamic credentials, falling back to environment variables:', error);
+      logger.error('Failed to initialize Redis with dynamic credentials, falling back to environment variables:', error);
       
       // Fallback to environment variables if secrets service fails
       redisHost = process.env.REDIS_HOST || "localhost";
@@ -61,23 +62,23 @@ const initializeRedisClient = async () => {
     });
 
     redisClient.on("error", (err) => {
-      console.error("Redis Client Error:", err);
+      logger.error("Redis Client Error:", err);
       // Log TLS-specific errors for debugging
       if (err.message.includes('TLS') || err.message.includes('certificate')) {
-        console.error("Redis TLS Error - Check certificate configuration and REDIS_TLS setting");
+        logger.error("Redis TLS Error - Check certificate configuration and REDIS_TLS setting");
       }
     });
 
     redisClient.on("connect", () => {
-      console.log(`Redis Client Connected (TLS: ${useTls ? 'enabled' : 'disabled'})`);
+      logger.info(`Redis Client Connected (TLS: ${useTls ? 'enabled' : 'disabled'})`);
     });
 
     redisClient.on("ready", () => {
-      console.log("Redis Client Ready - Authentication successful");
+      logger.info("Redis Client Ready - Authentication successful");
     });
 
     redisClient.on("end", () => {
-      console.log("Redis Client Connection Ended");
+      logger.info("Redis Client Connection Ended");
     });
 
     await redisClient.connect();
@@ -170,7 +171,7 @@ class WalletRateLimiter {
         total: this.maxRequests,
       };
     } catch (error) {
-      console.error("Rate limit check failed:", error);
+      logger.error("Rate limit check failed:", error);
       // Fail open - allow request if Redis is down
       return {
         allowed: true,
@@ -224,7 +225,7 @@ class WalletRateLimiter {
         total: this.maxRequests,
       };
     } catch (error) {
-      console.error("Rate limit status check failed:", error);
+      logger.error("Rate limit status check failed:", error);
       // Return default status if Redis is down
       return {
         current: 0,

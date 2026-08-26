@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const cron = require('node-cron');
 const VaultBalanceMonitorService = require('../services/vaultBalanceMonitorService');
 
@@ -11,12 +12,12 @@ class VaultBalanceMonitoringJob {
 
   start() {
     if (!this.service.isEnabled()) {
-      console.warn('Vault balance monitoring job is disabled via VAULT_BALANCE_MONITOR_ENABLED=false');
+      logger.warn('Vault balance monitoring job is disabled via VAULT_BALANCE_MONITOR_ENABLED=false');
       return;
     }
 
     if (this.cronJob) {
-      console.log('Vault balance monitoring job is already running');
+      logger.info('Vault balance monitoring job is already running');
       return;
     }
 
@@ -24,7 +25,7 @@ class VaultBalanceMonitoringJob {
       await this.execute();
     });
 
-    console.log(`Vault balance monitoring job started with schedule ${this.cronSchedule}.`);
+    logger.info(`Vault balance monitoring job started with schedule ${this.cronSchedule}.`);
   }
 
   stop() {
@@ -36,7 +37,7 @@ class VaultBalanceMonitoringJob {
 
   async execute() {
     if (this.isRunning) {
-      console.log('Vault balance monitoring job already in progress, skipping overlapping run.');
+      logger.info('Vault balance monitoring job already in progress, skipping overlapping run.');
       return;
     }
 
@@ -45,7 +46,7 @@ class VaultBalanceMonitoringJob {
     try {
       await this.service.runCheck();
     } catch (error) {
-      console.error('Vault balance monitoring job failed:', error);
+      logger.error('Vault balance monitoring job failed:', error);
     } finally {
       this.isRunning = false;
     }

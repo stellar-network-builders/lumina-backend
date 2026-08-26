@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { HistoricalTVL, HistoricalTokenPrice } = require('../models');
 const { Op } = require('sequelize');
 
@@ -221,7 +222,7 @@ class TVLPriceCorrelationService {
 
       return result;
     } catch (error) {
-      console.error('Error in correlation analysis:', error);
+      logger.error('Error in correlation analysis:', error);
       throw error;
     }
   }

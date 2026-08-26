@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const crypto = require('crypto');
 const { Vault, SubSchedule, VaultBalanceMonitorState } = require('../models');
 const BalanceTracker = require('./balanceTracker');
@@ -54,12 +55,12 @@ class VaultBalanceMonitorService {
         }
       } catch (error) {
         result.errors += 1;
-        console.error(`Vault balance monitoring failed for ${vault.address}:`, error);
+        logger.error(`Vault balance monitoring failed for ${vault.address}:`, error);
         await this.recordErrorState(vault, error, startedAt);
       }
     }
 
-    console.log(
+    logger.info(
       `Vault balance monitor completed. Checked ${result.checked} vault(s), ` +
         `${result.discrepancies} discrepancy(ies), ${result.alertsSent} alert(s), ${result.errors} error(s).`
     );
@@ -151,7 +152,7 @@ class VaultBalanceMonitorService {
         last_error_message: null,
       });
 
-      console.log(
+      logger.info(
         `Vault ${vault.address} balance verified. ` +
           `On-chain ${checkPayload.onChainBalance}, expected unvested ${checkPayload.expectedUnvestedBalance}.`
       );
@@ -169,7 +170,7 @@ class VaultBalanceMonitorService {
       const alertResult = await this.alertService.sendVaultBalanceDiscrepancyAlert(checkPayload);
       alertSent = alertResult.sent;
     } else {
-      console.warn(
+      logger.warn(
         `Vault ${vault.address} discrepancy unchanged. Suppressing duplicate alert for signature ${discrepancySignature}.`
       );
     }
@@ -187,7 +188,7 @@ class VaultBalanceMonitorService {
       last_error_message: null,
     });
 
-    console.error(
+    logger.error(
       `Vault balance discrepancy detected for ${vault.address}. ` +
         `On-chain ${checkPayload.onChainBalance}, expected unvested ${checkPayload.expectedUnvestedBalance}, ` +
         `${differenceDirection} ${checkPayload.absoluteDifference}.`
@@ -274,7 +275,7 @@ class VaultBalanceMonitorService {
         last_error_message: error.message,
       });
     } catch (stateError) {
-      console.error(
+      logger.error(
         `Failed to persist vault balance monitor error state for ${vault.address}:`,
         stateError
       );

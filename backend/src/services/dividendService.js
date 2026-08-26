@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { DividendRound, DividendDistribution, DividendSnapshot, Vault, Beneficiary, SubSchedule } = require('../models');
 const { sequelize } = require('../database/connection');
 const Sentry = require('@sentry/node');
@@ -70,12 +71,12 @@ class DividendService {
         }
       });
 
-      console.log(`✅ Dividend round created: ${dividendRound.id}`);
+      logger.info(`✅ Dividend round created: ${dividendRound.id}`);
       return dividendRound;
 
     } catch (error) {
       await transaction.rollback();
-      console.error('❌ Error creating dividend round:', error);
+      logger.error('❌ Error creating dividend round:', error);
       Sentry.captureException(error, {
         tags: { service: 'dividend-service' },
         extra: { tokenAddress, totalAmount, dividendToken, createdBy }
@@ -122,7 +123,7 @@ class DividendService {
         transaction
       });
 
-      console.log(`📸 Taking snapshot for ${vaults.length} vaults`);
+      logger.info(`📸 Taking snapshot for ${vaults.length} vaults`);
 
       let totalEligibleHolders = 0;
       let totalEligibleBalance = 0;
@@ -145,7 +146,7 @@ class DividendService {
             }
 
           } catch (error) {
-            console.error(`❌ Error processing beneficiary ${beneficiary.address}:`, error);
+            logger.error(`❌ Error processing beneficiary ${beneficiary.address}:`, error);
             // Continue processing other beneficiaries
           }
         }
@@ -161,7 +162,7 @@ class DividendService {
 
       await transaction.commit();
 
-      console.log(`✅ Snapshot completed: ${totalEligibleHolders} eligible holders, ${totalEligibleBalance} total balance`);
+      logger.info(`✅ Snapshot completed: ${totalEligibleHolders} eligible holders, ${totalEligibleBalance} total balance`);
 
       // Send notification
       await this.notifySnapshotCompleted(dividendRound, totalEligibleHolders, totalEligibleBalance);
@@ -181,7 +182,7 @@ class DividendService {
         { where: { id: dividendRoundId } }
       );
 
-      console.error('❌ Error taking dividend snapshot:', error);
+      logger.error('❌ Error taking dividend snapshot:', error);
       Sentry.captureException(error, {
         tags: { service: 'dividend-service' },
         extra: { dividendRoundId }
@@ -234,7 +235,7 @@ class DividendService {
       };
 
     } catch (error) {
-      console.error(`❌ Error calculating snapshot for beneficiary ${beneficiary.address}:`, error);
+      logger.error(`❌ Error calculating snapshot for beneficiary ${beneficiary.address}:`, error);
       throw error;
     }
   }
@@ -316,7 +317,7 @@ class DividendService {
       };
 
     } catch (error) {
-      console.error('❌ Error calculating vesting:', error);
+      logger.error('❌ Error calculating vesting:', error);
       throw error;
     }
   }
@@ -364,7 +365,7 @@ class DividendService {
       return 0;
 
     } catch (error) {
-      console.error('❌ Error calculating schedule vesting:', error);
+      logger.error('❌ Error calculating schedule vesting:', error);
       return 0;
     }
   }
@@ -399,7 +400,7 @@ class DividendService {
         transaction
       });
 
-      console.log(`💰 Calculating distributions for ${snapshots.length} eligible beneficiaries`);
+      logger.info(`💰 Calculating distributions for ${snapshots.length} eligible beneficiaries`);
 
       const totalDividendAmount = parseFloat(dividendRound.total_dividend_amount);
       const totalEligibleBalance = parseFloat(dividendRound.total_eligible_balance);
@@ -431,7 +432,7 @@ class DividendService {
 
       await transaction.commit();
 
-      console.log(`✅ Distribution calculations completed for ${distributions.length} beneficiaries`);
+      logger.info(`✅ Distribution calculations completed for ${distributions.length} beneficiaries`);
 
       // Send notification
       await this.notifyCalculationsCompleted(dividendRound, distributions.length);
@@ -447,7 +448,7 @@ class DividendService {
         { where: { id: dividendRoundId } }
       );
 
-      console.error('❌ Error calculating dividend distributions:', error);
+      logger.error('❌ Error calculating dividend distributions:', error);
       Sentry.captureException(error, {
         tags: { service: 'dividend-service' },
         extra: { dividendRoundId }
@@ -513,7 +514,7 @@ class DividendService {
       };
 
     } catch (error) {
-      console.error(`❌ Error calculating distribution for beneficiary ${snapshot.beneficiary_address}:`, error);
+      logger.error(`❌ Error calculating distribution for beneficiary ${snapshot.beneficiary_address}:`, error);
       throw error;
     }
   }
@@ -545,7 +546,7 @@ class DividendService {
         order: [['dividend_amount', 'DESC']]
       });
 
-      console.log(`💸 Starting distribution of ${distributions.length} dividend payments`);
+      logger.info(`💸 Starting distribution of ${distributions.length} dividend payments`);
 
       let successCount = 0;
       let failureCount = 0;
@@ -565,7 +566,7 @@ class DividendService {
             successCount++;
           } else {
             failureCount++;
-            console.error('❌ Distribution failed:', result.reason);
+            logger.error('❌ Distribution failed:', result.reason);
           }
         }
 
@@ -582,7 +583,7 @@ class DividendService {
         distribution_timestamp: new Date()
       });
 
-      console.log(`✅ Distribution completed: ${successCount} successful, ${failureCount} failed`);
+      logger.info(`✅ Distribution completed: ${successCount} successful, ${failureCount} failed`);
 
       // Send notification
       await this.notifyDistributionCompleted(dividendRound, successCount, failureCount, totalAmount);
@@ -596,7 +597,7 @@ class DividendService {
       };
 
     } catch (error) {
-      console.error('❌ Error distributing dividends:', error);
+      logger.error('❌ Error distributing dividends:', error);
       
       // Mark round as failed
       await DividendRound.update(
@@ -639,7 +640,7 @@ class DividendService {
         distributed_at: new Date()
       });
 
-      console.log(`💰 Sent ${dividendAmount} ${dividendToken} to ${recipientAddress} (tx: ${transactionHash})`);
+      logger.info(`💰 Sent ${dividendAmount} ${dividendToken} to ${recipientAddress} (tx: ${transactionHash})`);
 
       return {
         success: true,
@@ -655,7 +656,7 @@ class DividendService {
         error_message: error.message
       });
 
-      console.error(`❌ Failed to send dividend to ${distribution.beneficiary_address}:`, error);
+      logger.error(`❌ Failed to send dividend to ${distribution.beneficiary_address}:`, error);
       throw error;
     }
   }
@@ -668,10 +669,10 @@ class DividendService {
       // This would integrate with Stellar/Soroban SDK or other blockchain
       // For now, we'll return a mock transaction hash
       
-      console.log(`🔄 Sending side-drip payment:`);
-      console.log(`   Recipient: ${recipientAddress}`);
-      console.log(`   Amount: ${amount} ${token}`);
-      console.log(`   Method: side-drip`);
+      logger.info(`🔄 Sending side-drip payment:`);
+      logger.info(`   Recipient: ${recipientAddress}`);
+      logger.info(`   Amount: ${amount} ${token}`);
+      logger.info(`   Method: side-drip`);
 
       // Simulate transaction processing
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -682,7 +683,7 @@ class DividendService {
       return mockTxHash;
 
     } catch (error) {
-      console.error('❌ Error sending side-drip payment:', error);
+      logger.error('❌ Error sending side-drip payment:', error);
       throw error;
     }
   }
@@ -708,7 +709,7 @@ class DividendService {
       return dividendRound;
 
     } catch (error) {
-      console.error('❌ Error getting dividend round:', error);
+      logger.error('❌ Error getting dividend round:', error);
       throw error;
     }
   }
@@ -731,7 +732,7 @@ class DividendService {
       return rounds;
 
     } catch (error) {
-      console.error('❌ Error getting dividend rounds:', error);
+      logger.error('❌ Error getting dividend rounds:', error);
       throw error;
     }
   }
@@ -756,7 +757,7 @@ class DividendService {
       return distributions;
 
     } catch (error) {
-      console.error('❌ Error getting user dividend history:', error);
+      logger.error('❌ Error getting user dividend history:', error);
       throw error;
     }
   }
@@ -784,7 +785,7 @@ Next: Calculate pro-rata distributions for each holder.`;
       });
 
     } catch (error) {
-      console.error('❌ Error sending snapshot notification:', error);
+      logger.error('❌ Error sending snapshot notification:', error);
     }
   }
 
@@ -805,7 +806,7 @@ Next: Begin side-drip distribution to beneficiaries.`;
       });
 
     } catch (error) {
-      console.error('❌ Error sending calculations notification:', error);
+      logger.error('❌ Error sending calculations notification:', error);
     }
   }
 
@@ -828,7 +829,7 @@ ${failureCount > 0 ? 'Some distributions failed. Please review error logs.' : 'A
       });
 
     } catch (error) {
-      console.error('❌ Error sending distribution notification:', error);
+      logger.error('❌ Error sending distribution notification:', error);
     }
   }
 
@@ -855,7 +856,7 @@ ${failureCount > 0 ? 'Some distributions failed. Please review error logs.' : 'A
       };
 
     } catch (error) {
-      console.error('❌ Error getting stats:', error);
+      logger.error('❌ Error getting stats:', error);
       throw error;
     }
   }

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const anchorService = require('../../services/anchorService');
 const models = require('../../models');
 const ClaimCalculator = require('../../services/claimCalculator');
@@ -17,7 +18,7 @@ const anchorResolver = {
         );
         return quote;
       } catch (error) {
-        console.error('Error fetching off-ramp quote:', error);
+        logger.error('Error fetching off-ramp quote:', error);
         throw new Error(`Failed to fetch off-ramp quote: ${error.message}`);
       }
     },
@@ -34,7 +35,7 @@ const anchorResolver = {
         );
         return quotes;
       } catch (error) {
-        console.error('Error fetching off-ramp quotes:', error);
+        logger.error('Error fetching off-ramp quotes:', error);
         throw new Error(`Failed to fetch off-ramp quotes: ${error.message}`);
       }
     },
@@ -143,7 +144,7 @@ const anchorResolver = {
         };
 
       } catch (error) {
-        console.error('Error calculating liquidity estimate:', error);
+        logger.error('Error calculating liquidity estimate:', error);
         throw new Error(`Failed to calculate liquidity estimate: ${error.message}`);
       }
     }

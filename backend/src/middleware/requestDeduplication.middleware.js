@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const crypto = require('crypto');
 const cacheService = require('../services/cacheService');
 
@@ -128,7 +129,7 @@ class RequestDeduplicationMiddleware {
       const inFlight = await cacheService.get(cacheKey);
       return inFlight !== null;
     } catch (error) {
-      console.error('Error checking in-flight status:', error);
+      logger.error('Error checking in-flight status:', error);
       return false;
     }
   }
@@ -146,7 +147,7 @@ class RequestDeduplicationMiddleware {
     try {
       await cacheService.set(cacheKey, { status: 'in-flight', timestamp: Date.now() }, ttl);
     } catch (error) {
-      console.error('Error marking request as in-flight:', error);
+      logger.error('Error marking request as in-flight:', error);
     }
 
     // Clean up in-memory map after TTL
@@ -165,7 +166,7 @@ class RequestDeduplicationMiddleware {
       const result = await cacheService.get(cacheKey);
       return result;
     } catch (error) {
-      console.error('Error getting cached result:', error);
+      logger.error('Error getting cached result:', error);
       return null;
     }
   }
@@ -184,7 +185,7 @@ class RequestDeduplicationMiddleware {
         timestamp: Date.now()
       }, ttl);
     } catch (error) {
-      console.error('Error caching result:', error);
+      logger.error('Error caching result:', error);
     }
   }
 
@@ -254,7 +255,7 @@ class RequestDeduplicationMiddleware {
         // Check if we have a cached result
         const cachedResult = await this.getCachedResult(cacheKey);
         if (cachedResult) {
-          console.log(`[DEDUP] Cache hit for ${operationType}: ${cacheKey}`);
+          logger.info(`[DEDUP] Cache hit for ${operationType}: ${cacheKey}`);
           return res.json({
             success: true,
             data: cachedResult,
@@ -266,7 +267,7 @@ class RequestDeduplicationMiddleware {
         // Check if request is currently being processed
         const inFlight = await this.isInFlight(cacheKey);
         if (inFlight) {
-          console.log(`[DEDUP] Request in-flight, waiting: ${cacheKey}`);
+          logger.info(`[DEDUP] Request in-flight, waiting: ${cacheKey}`);
           
           try {
             const result = await this.waitForInFlightRequest(cacheKey);
@@ -277,14 +278,14 @@ class RequestDeduplicationMiddleware {
               timestamp: new Date().toISOString()
             });
           } catch (waitError) {
-            console.error('Error waiting for in-flight request:', waitError);
+            logger.error('Error waiting for in-flight request:', waitError);
             // Continue with normal processing if wait fails
           }
         }
 
         // Mark request as in-flight and proceed with processing
         await this.markInFlight(cacheKey, ttl);
-        console.log(`[DEDUP] Processing new request: ${cacheKey}`);
+        logger.info(`[DEDUP] Processing new request: ${cacheKey}`);
 
         // Override res.json to cache the response
         const originalJson = res.json;
@@ -292,7 +293,7 @@ class RequestDeduplicationMiddleware {
           // Cache successful responses
           if (data && data.success !== false) {
             cacheService.cacheResult(cacheKey, data, ttl).catch(err => {
-              console.error('Error caching response:', err);
+              logger.error('Error caching response:', err);
             });
           }
           
@@ -301,7 +302,7 @@ class RequestDeduplicationMiddleware {
 
         next();
       } catch (error) {
-        console.error('Error in request deduplication middleware:', error);
+        logger.error('Error in request deduplication middleware:', error);
         // Continue with normal processing if deduplication fails
         next();
       }
@@ -316,9 +317,9 @@ class RequestDeduplicationMiddleware {
     try {
       const pattern = `dedup:${operationType}:*`;
       await cacheService.deletePattern(pattern);
-      console.log(`[DEDUP] Cleared cache for operation: ${operationType}`);
+      logger.info(`[DEDUP] Cleared cache for operation: ${operationType}`);
     } catch (error) {
-      console.error(`Error clearing cache for operation ${operationType}:`, error);
+      logger.error(`Error clearing cache for operation ${operationType}:`, error);
     }
   }
 
@@ -328,9 +329,9 @@ class RequestDeduplicationMiddleware {
   async clearAllCache() {
     try {
       await cacheService.deletePattern('dedup:*');
-      console.log('[DEDUP] Cleared all deduplication cache');
+      logger.info('[DEDUP] Cleared all deduplication cache');
     } catch (error) {
-      console.error('Error clearing all deduplication cache:', error);
+      logger.error('Error clearing all deduplication cache:', error);
     }
   }
 

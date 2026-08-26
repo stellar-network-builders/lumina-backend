@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const axios = require('axios');
 
 class PriceService {
@@ -46,17 +47,17 @@ class PriceService {
 
       return price;
     } catch (error) {
-      console.error(`Error fetching price for token ${tokenAddress}:`, error.message);
+      logger.error(`Error fetching price for token ${tokenAddress}:`, error.message);
       
       // Fallback to alternative provider if primary fails
       if (this.provider === 'coinmarketcap') {
-        console.log('Falling back to CoinGecko...');
+        logger.info('Falling back to CoinGecko...');
         try {
           const price = await this.getCoinGeckoPrice(tokenAddress, timestamp);
           this.cache.set(cacheKey, { price, timestamp: Date.now() });
           return price;
         } catch (fallbackError) {
-          console.error('Fallback also failed:', fallbackError.message);
+          logger.error('Fallback also failed:', fallbackError.message);
         }
       }
       
@@ -188,7 +189,7 @@ class PriceService {
           return result.id;
         }
       } catch (searchError) {
-        console.error(`Search failed for token ${tokenAddress}:`, searchError.message);
+        logger.error(`Search failed for token ${tokenAddress}:`, searchError.message);
       }
 
       throw new Error(`Could not find CoinGecko ID for token address ${tokenAddress}`);

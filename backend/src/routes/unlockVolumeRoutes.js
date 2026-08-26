@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const TokenUnlockVolumeService = require('../services/tokenUnlockVolumeService');
 const authService = require('../services/authService');
+const logger = require('../utils/logger');
 
 const unlockVolumeService = new TokenUnlockVolumeService();
 
@@ -49,7 +50,7 @@ router.get(
       
       res.json(result);
     } catch (error) {
-      console.error('Error generating unlock projection:', error);
+      logger.error('Error generating unlock projection:', error);
       res.status(500).json({
         success: false,
         message: error.message
@@ -81,7 +82,7 @@ router.get(
       
       res.json(result);
     } catch (error) {
-      console.error('Error getting current unlock stats:', error);
+      logger.error('Error getting current unlock stats:', error);
       res.status(500).json({
         success: false,
         message: error.message
@@ -129,7 +130,7 @@ router.get(
         }
       });
     } catch (error) {
-      console.error('Error generating chart data:', error);
+      logger.error('Error generating chart data:', error);
       res.status(500).json({
         success: false,
         message: error.message
@@ -188,7 +189,7 @@ router.get(
         }
       });
     } catch (error) {
-      console.error('Error generating risk analysis:', error);
+      logger.error('Error generating risk analysis:', error);
       res.status(500).json({
         success: false,
         message: error.message
@@ -234,7 +235,7 @@ router.get(
         res.json(projection);
       }
     } catch (error) {
-      console.error('Error exporting unlock data:', error);
+      logger.error('Error exporting unlock data:', error);
       res.status(500).json({
         success: false,
         message: error.message

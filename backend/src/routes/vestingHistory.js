@@ -11,6 +11,7 @@ const {
 } = require('../models');
 const { Op } = require('sequelize');
 const cacheService = require('../services/cacheService');
+const logger = require('../utils/logger');
 
 /**
  * Get user's complete vesting history (optimized REST endpoint)
@@ -202,7 +203,7 @@ router.get('/user/:userAddress/history', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching vesting history:', error);
+    logger.error('Error fetching vesting history:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch vesting history'
@@ -389,7 +390,7 @@ router.get('/user/:userAddress/summary', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching vesting summary:', error);
+    logger.error('Error fetching vesting summary:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch vesting summary'
@@ -547,7 +548,7 @@ router.get('/schedule/:scheduleId', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching vesting schedule:', error);
+    logger.error('Error fetching vesting schedule:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch vesting schedule'
@@ -664,7 +665,7 @@ router.get('/user/:userAddress/claims', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching claim history:', error);
+    logger.error('Error fetching claim history:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch claim history'
@@ -772,7 +773,7 @@ router.get('/statistics', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching vesting statistics:', error);
+    logger.error('Error fetching vesting statistics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch vesting statistics'
@@ -804,7 +805,7 @@ router.post('/user/:userAddress/cache/clear', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error clearing cache:', error);
+    logger.error('Error clearing cache:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to clear cache'

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { rateLimit } = require('express-rate-limit');
 
 // Use a Redis-backed store only when Redis is configured AND we're not running
@@ -22,11 +23,11 @@ if (useRedis) {
       enableOfflineQueue: false,
       maxRetriesPerRequest: 1,
     });
-    client.on('error', (err) => console.error('Rate-limit Redis error:', err.message));
+    client.on('error', (err) => logger.error('Rate-limit Redis error:', err.message));
     globalStore = new RedisStore({ sendCommand: (...args) => client.call(...args), prefix: 'rl:global:' });
     authStore = new RedisStore({ sendCommand: (...args) => client.call(...args), prefix: 'rl:auth:' });
   } catch (err) {
-    console.warn('Rate-limit Redis store unavailable, using in-memory store:', err.message);
+    logger.warn('Rate-limit Redis store unavailable, using in-memory store:', err.message);
     globalStore = undefined;
     authStore = undefined;
   }

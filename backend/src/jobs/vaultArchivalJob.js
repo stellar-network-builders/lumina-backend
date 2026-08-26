@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const cron = require('node-cron');
 const { sequelize } = require('../database/connection');
 const { Vault, SubSchedule } = require('../models');
@@ -10,21 +11,21 @@ class VaultArchivalJob {
   }
 
   start() {
-    console.log('Initializing Vault Archival Job...');
+    logger.info('Initializing Vault Archival Job...');
     
     // Ensure the archived_vaults table exists before scheduling
     this.initializeTable().then(() => {
       cron.schedule(this.cronSchedule, async () => {
-        console.log('Running Vault Archival Job...');
+        logger.info('Running Vault Archival Job...');
         try {
           await this.archiveCompletedVaults();
         } catch (error) {
-          console.error('Error running Vault Archival Job:', error);
+          logger.error('Error running Vault Archival Job:', error);
         }
       });
-      console.log('Vault Archival Job scheduled successfully.');
+      logger.info('Vault Archival Job scheduled successfully.');
     }).catch(err => {
-      console.error('Failed to initialize archived_vaults table:', err);
+      logger.error('Failed to initialize archived_vaults table:', err);
     });
   }
 
@@ -41,7 +42,7 @@ class VaultArchivalJob {
   }
 
   async archiveCompletedVaults() {
-    console.log('Starting vault archival process...');
+    logger.info('Starting vault archival process...');
     
     try {
       const vaults = await Vault.findAll();
@@ -109,17 +110,17 @@ class VaultArchivalJob {
 
             await transaction.commit();
             archivedCount++;
-            console.log(`Archived vault: ${vault.address}`);
+            logger.info(`Archived vault: ${vault.address}`);
           } catch (err) {
             await transaction.rollback();
-            console.error(`Error archiving vault ${vault.address}:`, err);
+            logger.error(`Error archiving vault ${vault.address}:`, err);
           }
         }
       }
       
-      console.log(`Vault archival process completed. Archived ${archivedCount} vaults.`);
+      logger.info(`Vault archival process completed. Archived ${archivedCount} vaults.`);
     } catch (error) {
-      console.error('Error during vault archival:', error);
+      logger.error('Error during vault archival:', error);
     }
   }
 }

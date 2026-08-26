@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const axios = require('axios');
 const idempotencyKeyService = require('./idempotencyKeyService');
 
@@ -66,7 +67,7 @@ class SlackWebhookService {
   async sendLargeClaimAlert(claimData, usdValue) {
     try {
       if (!this.webhookUrl) {
-        console.warn('SLACK_WEBHOOK_URL not set, skipping Slack notification');
+        logger.warn('SLACK_WEBHOOK_URL not set, skipping Slack notification');
         return false;
       }
 
@@ -178,13 +179,13 @@ class SlackWebhookService {
       );
 
       if (result.success) {
-        console.log(`Slack alert sent for large claim: ${transaction_hash}${result.fromCache ? ' (from cache)' : ''}`);
+        logger.info(`Slack alert sent for large claim: ${transaction_hash}${result.fromCache ? ' (from cache)' : ''}`);
         return true;
       }
 
       return false;
     } catch (error) {
-      console.error('Error sending Slack webhook:', error.message);
+      logger.error('Error sending Slack webhook:', error.message);
       return false;
     }
   }
@@ -217,7 +218,7 @@ class SlackWebhookService {
   async sendCircuitBreakerAlert(event) {
     try {
       if (!this.webhookUrl) {
-        console.warn('SLACK_WEBHOOK_URL not set, skipping circuit-breaker Slack notification');
+        logger.warn('SLACK_WEBHOOK_URL not set, skipping circuit-breaker Slack notification');
         return false;
       }
 
@@ -258,12 +259,12 @@ class SlackWebhookService {
       });
 
       if (response.status === 200) {
-        console.log(`Slack circuit-breaker alert sent for ${service} (${state})`);
+        logger.info(`Slack circuit-breaker alert sent for ${service} (${state})`);
         return true;
       }
       return false;
     } catch (error) {
-      console.error('Error sending circuit-breaker Slack alert:', error.message);
+      logger.error('Error sending circuit-breaker Slack alert:', error.message);
       return false;
     }
   }
@@ -277,7 +278,7 @@ class SlackWebhookService {
   async sendCircuitBreakerDigest(summaries = []) {
     try {
       if (!this.webhookUrl) {
-        console.warn('SLACK_WEBHOOK_URL not set, skipping circuit-breaker digest');
+        logger.warn('SLACK_WEBHOOK_URL not set, skipping circuit-breaker digest');
         return false;
       }
 
@@ -300,7 +301,7 @@ class SlackWebhookService {
       });
       return response.status === 200;
     } catch (error) {
-      console.error('Error sending circuit-breaker digest:', error.message);
+      logger.error('Error sending circuit-breaker digest:', error.message);
       return false;
     }
   }
@@ -328,7 +329,7 @@ class SlackWebhookService {
 
       return false;
     } catch (error) {
-      console.error('Error processing claim alert:', error);
+      logger.error('Error processing claim alert:', error);
       return false;
     }
   }

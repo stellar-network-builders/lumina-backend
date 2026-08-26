@@ -1,6 +1,7 @@
 ﻿const express = require('express');
 const router = express.Router();
 const futureLienService = require('../services/futureLienService');
+const logger = require('../utils/logger');
 // There is no `../middleware/authMiddleware` module / `authenticateToken` export;
 // build the user-auth middleware from authService.
 const authService = require('../services/authService');
@@ -29,7 +30,7 @@ router.post('/future-liens', authenticateToken, createFutureLienValidation, hand
       message: 'Future lien created successfully'
     });
   } catch (error) {
-    console.error('Error creating future lien:', error);
+    logger.error('Error creating future lien:', error);
     res.status(400).json({
       success: false,
       error: error.message,
@@ -59,7 +60,7 @@ router.get('/future-liens/beneficiary/:address', authenticateToken, [
       count: liens.length
     });
   } catch (error) {
-    console.error('Error getting beneficiary liens:', error);
+    logger.error('Error getting beneficiary liens:', error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -89,7 +90,7 @@ router.get('/future-liens/vault/:address', authenticateToken, [
       count: liens.length
     });
   } catch (error) {
-    console.error('Error getting vault liens:', error);
+    logger.error('Error getting vault liens:', error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -119,7 +120,7 @@ router.get('/future-liens/grant-stream/:id', authenticateToken, [
       count: liens.length
     });
   } catch (error) {
-    console.error('Error getting grant stream liens:', error);
+    logger.error('Error getting grant stream liens:', error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -147,7 +148,7 @@ router.post('/future-liens/:id/release', authenticateToken, processLienReleaseVa
       message: 'Lien release processed successfully'
     });
   } catch (error) {
-    console.error('Error processing lien release:', error);
+    logger.error('Error processing lien release:', error);
     res.status(400).json({
       success: false,
       error: error.message,
@@ -171,7 +172,7 @@ router.post('/future-liens/:id/cancel', authenticateToken, cancelFutureLienValid
       message: 'Future lien cancelled successfully'
     });
   } catch (error) {
-    console.error('Error cancelling future lien:', error);
+    logger.error('Error cancelling future lien:', error);
     res.status(400).json({
       success: false,
       error: error.message,
@@ -201,7 +202,7 @@ router.get('/future-liens/summary', authenticateToken, [
       count: summary.length
     });
   } catch (error) {
-    console.error('Error getting lien summary:', error);
+    logger.error('Error getting lien summary:', error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -232,7 +233,7 @@ router.get('/future-liens/:id', authenticateToken, getLienValidation, handleVali
       data: lien
     });
   } catch (error) {
-    console.error('Error getting lien details:', error);
+    logger.error('Error getting lien details:', error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -253,7 +254,7 @@ router.post('/grant-streams', authenticateToken, createGrantStreamValidation, ha
       message: 'Grant stream created successfully'
     });
   } catch (error) {
-    console.error('Error creating grant stream:', error);
+    logger.error('Error creating grant stream:', error);
     res.status(400).json({
       success: false,
       error: error.message,
@@ -273,7 +274,7 @@ router.get('/grant-streams', authenticateToken, async (req, res) => {
       count: grantStreams.length
     });
   } catch (error) {
-    console.error('Error getting grant streams:', error);
+    logger.error('Error getting grant streams:', error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -305,7 +306,7 @@ router.get('/grant-streams/:id', authenticateToken, [
       data: grantStream
     });
   } catch (error) {
-    console.error('Error getting grant stream details:', error);
+    logger.error('Error getting grant stream details:', error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -386,7 +387,7 @@ router.get('/vesting-to-grant/calculator', authenticateToken, calculatorValidati
       }
     });
   } catch (error) {
-    console.error('Error calculating lien impact:', error);
+    logger.error('Error calculating lien impact:', error);
     res.status(500).json({
       success: false,
       error: error.message,

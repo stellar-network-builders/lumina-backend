@@ -3,6 +3,7 @@ const router = express.Router();
 const unlockProjectionService = require('../services/unlockProjectionService');
 const syncHealthCheckService = require('../services/syncHealthCheckService');
 const authService = require('../services/authService');
+const logger = require('../utils/logger');
 
 /**
  * GET /api/analytics/projections/unlocks
@@ -77,7 +78,7 @@ router.get('/unlocks', authService.authenticate(), async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error in unlock projection route:', error);
+    logger.error('Error in unlock projection route:', error);
     res.status(500).json({
       success: false,
       error: error.message

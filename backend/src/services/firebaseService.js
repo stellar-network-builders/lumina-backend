@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const admin = require('firebase-admin');
 const { DeviceToken } = require('../models');
 
@@ -26,15 +27,15 @@ class FirebaseService {
           credential: admin.credential.cert(serviceAccount),
         });
       } else {
-        console.warn('Firebase credentials not configured. Push notifications will be disabled.');
+        logger.warn('Firebase credentials not configured. Push notifications will be disabled.');
         return;
       }
 
       this.messaging = admin.messaging();
       this.initialized = true;
-      console.log('Firebase Admin SDK initialized successfully.');
+      logger.info('Firebase Admin SDK initialized successfully.');
     } catch (error) {
-      console.error('Failed to initialize Firebase Admin SDK:', error);
+      logger.error('Failed to initialize Firebase Admin SDK:', error);
       this.initialized = false;
     }
   }
@@ -91,7 +92,7 @@ class FirebaseService {
 
     try {
       const response = await this.messaging.send(message);
-      console.log(`Push notification sent successfully: ${response}`);
+      logger.info(`Push notification sent successfully: ${response}`);
       
       // Update last_used_at for the device token
       await DeviceToken.update(
@@ -101,12 +102,12 @@ class FirebaseService {
       
       return response;
     } catch (error) {
-      console.error('Error sending push notification:', error);
+      logger.error('Error sending push notification:', error);
       
       // Handle invalid tokens
       if (error.code === 'messaging/registration-token-not-registered' ||
           error.code === 'messaging/invalid-registration-token') {
-        console.log(`Marking device token as inactive: ${deviceToken}`);
+        logger.info(`Marking device token as inactive: ${deviceToken}`);
         await DeviceToken.update(
           { is_active: false },
           { where: { device_token: deviceToken } }
@@ -197,7 +198,7 @@ class FirebaseService {
         ...message,
       });
 
-      console.log(`Batch notification sent. Success: ${response.successCount}, Failure: ${response.failureCount}`);
+      logger.info(`Batch notification sent. Success: ${response.successCount}, Failure: ${response.failureCount}`);
 
       // Handle invalid tokens
       const invalidTokens = [];
@@ -212,7 +213,7 @@ class FirebaseService {
       });
 
       if (invalidTokens.length > 0) {
-        console.log(`Marking ${invalidTokens.length} device tokens as inactive`);
+        logger.info(`Marking ${invalidTokens.length} device tokens as inactive`);
         await DeviceToken.update(
           { is_active: false },
           { where: { device_token: invalidTokens } }
@@ -236,7 +237,7 @@ class FirebaseService {
 
       return response;
     } catch (error) {
-      console.error('Error sending batch push notifications:', error);
+      logger.error('Error sending batch push notifications:', error);
       throw error;
     }
   }

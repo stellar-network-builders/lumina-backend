@@ -1,5 +1,6 @@
 'use strict';
 
+const logger = require('../utils/logger');
 const futureLienService = require('./futureLienService');
 const futureLienContractService = require('./futureLienContractService');
 const vestingService = require('./vestingService');
@@ -17,11 +18,11 @@ class FutureLienProcessorService {
    */
   start() {
     if (this.isProcessing) {
-      console.log('Future lien processor is already running');
+      logger.info('Future lien processor is already running');
       return;
     }
 
-    console.log('Starting future lien processor...');
+    logger.info('Starting future lien processor...');
     this.isProcessing = true;
     
     // Process immediately on start
@@ -38,11 +39,11 @@ class FutureLienProcessorService {
    */
   stop() {
     if (!this.isProcessing) {
-      console.log('Future lien processor is not running');
+      logger.info('Future lien processor is not running');
       return;
     }
 
-    console.log('Stopping future lien processor...');
+    logger.info('Stopping future lien processor...');
     this.isProcessing = false;
     
     if (this.processingInterval) {
@@ -60,7 +61,7 @@ class FutureLienProcessorService {
     }
 
     try {
-      console.log('Processing pending lien releases...');
+      logger.info('Processing pending lien releases...');
       
       // Get all active liens that are within release period
       const activeLiens = await futureLienService.getActiveLienSummary();
@@ -69,7 +70,7 @@ class FutureLienProcessorService {
         try {
           await this.processIndividualLien(lien);
         } catch (error) {
-          console.error(`Error processing lien ${lien.id}:`, error);
+          logger.error(`Error processing lien ${lien.id}:`, error);
           
           // Log the processing error
           auditLogger.logAction('system', 'LIEN_PROCESSING_ERROR', lien.id, {
@@ -79,10 +80,10 @@ class FutureLienProcessorService {
         }
       }
       
-      console.log(`Processed ${activeLiens.length} active liens`);
+      logger.info(`Processed ${activeLiens.length} active liens`);
       
     } catch (error) {
-      console.error('Error in lien processing cycle:', error);
+      logger.error('Error in lien processing cycle:', error);
       
       // Log the cycle error
       auditLogger.logAction('system', 'LIEN_PROCESSING_CYCLE_ERROR', null, {
@@ -145,7 +146,7 @@ class FutureLienProcessorService {
         break;
       
       default:
-        console.warn(`Unknown release rate type: ${lien.release_rate_type}`);
+        logger.warn(`Unknown release rate type: ${lien.release_rate_type}`);
         return;
     }
 
@@ -238,7 +239,7 @@ class FutureLienProcessorService {
    */
   async executeLienRelease(lien, releaseAmount, releaseData = {}) {
     try {
-      console.log(`Executing release of ${releaseAmount} tokens for lien ${lien.id}`);
+      logger.info(`Executing release of ${releaseAmount} tokens for lien ${lien.id}`);
 
       // For now, we'll only process the database release
       // In a production environment, you would also:
@@ -254,7 +255,7 @@ class FutureLienProcessorService {
         ...releaseData
       }, processorAddress);
 
-      console.log(`Successfully processed release for lien ${lien.id}:`, releaseResult);
+      logger.info(`Successfully processed release for lien ${lien.id}:`, releaseResult);
 
       // In production, you would also execute the on-chain release:
       /*
@@ -271,7 +272,7 @@ class FutureLienProcessorService {
       */
 
     } catch (error) {
-      console.error(`Error executing release for lien ${lien.id}:`, error);
+      logger.error(`Error executing release for lien ${lien.id}:`, error);
       throw error;
     }
   }
@@ -298,7 +299,7 @@ class FutureLienProcessorService {
       });
       
     } catch (error) {
-      console.error('Error updating release with contract details:', error);
+      logger.error('Error updating release with contract details:', error);
       throw error;
     }
   }
@@ -329,7 +330,7 @@ class FutureLienProcessorService {
       };
       
     } catch (error) {
-      console.error(`Error processing specific lien ${lienId}:`, error);
+      logger.error(`Error processing specific lien ${lienId}:`, error);
       throw error;
     }
   }
@@ -368,7 +369,7 @@ class FutureLienProcessorService {
       return stats;
       
     } catch (error) {
-      console.error('Error getting processing stats:', error);
+      logger.error('Error getting processing stats:', error);
       throw error;
     }
   }

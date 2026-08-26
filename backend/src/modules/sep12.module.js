@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const SEP12Controller = require('./controllers/sep12.controller');
 const SEP12Service = require('./services/sep12.service');
 
@@ -13,9 +14,9 @@ class SEP12Module {
       this.service = new SEP12Service(this.dbManager);
       await this.service.initialize();
       this.controller = new SEP12Controller(this.dbManager);
-      console.log('SEP-12 KYC Module initialized successfully');
+      logger.info('SEP-12 KYC Module initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize SEP-12 KYC Module:', error.message);
+      logger.error('Failed to initialize SEP-12 KYC Module:', error.message);
       throw error;
     }
   }
@@ -25,7 +26,7 @@ class SEP12Module {
       throw new Error('SEP-12 Module not initialized. Call initialize() first.');
     }
     this.controller.registerRoutes(app);
-    console.log('SEP-12 KYC routes registered');
+    logger.info('SEP-12 KYC routes registered');
   }
 }
 

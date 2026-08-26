@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Beneficiary = require("../models/beneficiary");
 const milestoneCelebrationService = require("../services/milestoneCelebrationService");
+const logger = require("../utils/logger");
 
 /**
  * POST /webhooks/ses-bounces
@@ -10,11 +11,11 @@ const milestoneCelebrationService = require("../services/milestoneCelebrationSer
 router.post("/ses-bounces", async (req, res) => {
   try {
     // Log the incoming request for debugging
-    console.log("SES webhook received:", JSON.stringify(req.body, null, 2));
+    logger.info("SES webhook received:", JSON.stringify(req.body, null, 2));
 
     // Handle SNS subscription confirmation
     if (req.body.Type === "SubscriptionConfirmation" && req.body.SubscribeURL) {
-      console.log("Confirming SNS subscription");
+      logger.info("Confirming SNS subscription");
       const axios = require("axios");
       await axios.get(req.body.SubscribeURL);
       return res.status(200).json({ message: "Subscription confirmed" });
@@ -27,12 +28,12 @@ router.post("/ses-bounces", async (req, res) => {
       // Process bounce notifications
       if (message.notificationType === "bounce") {
         const bounce = message.bounce;
-        console.log("Processing bounce notification:", bounce);
+        logger.info("Processing bounce notification:", bounce);
 
         // Handle bounced recipients
         for (const recipient of bounce.bouncedRecipients) {
           const emailAddress = recipient.emailAddress;
-          console.log(`Marking email as invalid: ${emailAddress}`);
+          logger.info(`Marking email as invalid: ${emailAddress}`);
 
           // Update all beneficiaries with this email address
           await Beneficiary.update(
@@ -47,7 +48,7 @@ router.post("/ses-bounces", async (req, res) => {
             },
           );
 
-          console.log(
+          logger.info(
             `Updated beneficiaries with email ${emailAddress} as invalid`,
           );
         }
@@ -56,12 +57,12 @@ router.post("/ses-bounces", async (req, res) => {
       // Process complaint notifications
       if (message.notificationType === "complaint") {
         const complaint = message.complaint;
-        console.log("Processing complaint notification:", complaint);
+        logger.info("Processing complaint notification:", complaint);
 
         // Handle complained recipients
         for (const recipient of complaint.complainedRecipients) {
           const emailAddress = recipient.emailAddress;
-          console.log(
+          logger.info(
             `Marking email as invalid due to complaint: ${emailAddress}`,
           );
 
@@ -78,7 +79,7 @@ router.post("/ses-bounces", async (req, res) => {
             },
           );
 
-          console.log(
+          logger.info(
             `Updated beneficiaries with email ${emailAddress} as invalid due to complaint`,
           );
         }
@@ -87,7 +88,7 @@ router.post("/ses-bounces", async (req, res) => {
 
     res.status(200).json({ message: "Webhook processed successfully" });
   } catch (error) {
-    console.error("Error processing SES webhook:", error);
+    logger.error("Error processing SES webhook:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -106,7 +107,7 @@ router.post("/milestone-celebration", async (req, res) => {
       });
     }
 
-    console.log(`Triggering milestone celebration for milestone: ${milestone_id}`);
+    logger.info(`Triggering milestone celebration for milestone: ${milestone_id}`);
     
     const result = await milestoneCelebrationService.triggerCelebration(milestone_id);
     
@@ -116,7 +117,7 @@ router.post("/milestone-celebration", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error processing milestone celebration webhook:", error);
+    logger.error("Error processing milestone celebration webhook:", error);
     res.status(500).json({ 
       error: "Internal server error",
       details: error.message 
@@ -138,7 +139,7 @@ router.post("/celebration-config", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error creating celebration webhook:", error);
+    logger.error("Error creating celebration webhook:", error);
     res.status(500).json({ 
       error: "Internal server error",
       details: error.message 
@@ -161,7 +162,7 @@ router.get("/celebration-config/:organizationId", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error fetching celebration webhooks:", error);
+    logger.error("Error fetching celebration webhooks:", error);
     res.status(500).json({ 
       error: "Internal server error",
       details: error.message 
@@ -184,7 +185,7 @@ router.put("/celebration-config/:webhookId", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error updating celebration webhook:", error);
+    logger.error("Error updating celebration webhook:", error);
     res.status(500).json({ 
       error: "Internal server error",
       details: error.message 
@@ -206,7 +207,7 @@ router.delete("/celebration-config/:webhookId", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error deleting celebration webhook:", error);
+    logger.error("Error deleting celebration webhook:", error);
     res.status(500).json({ 
       error: "Internal server error",
       details: error.message 

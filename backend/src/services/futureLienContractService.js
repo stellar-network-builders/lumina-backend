@@ -1,6 +1,7 @@
 'use strict';
 
 // stellar-sdk v11 replaced the old top-level `Server` with `Horizon.Server`.
+const logger = require('../utils/logger');
 const { Horizon, TransactionBuilder, Networks, Operation, Asset, Keypair } = require('stellar-sdk');
 const auditLogger = require('./auditLogger');
 
@@ -110,7 +111,7 @@ class FutureLienContractService {
       };
 
     } catch (error) {
-      console.error('Error creating future lien on-chain:', error);
+      logger.error('Error creating future lien on-chain:', error);
       
       // Log the error
       auditLogger.logAction(params.beneficiaryAddress, 'CONTRACT_CREATE_FUTURE_LIEN_ERROR', null, {
@@ -189,7 +190,7 @@ class FutureLienContractService {
       };
 
     } catch (error) {
-      console.error('Error processing lien release on-chain:', error);
+      logger.error('Error processing lien release on-chain:', error);
       
       // Log the error
       auditLogger.logAction(params.signerPublicKey, 'CONTRACT_RELEASE_LIEN_TOKENS_ERROR', null, {
@@ -263,7 +264,7 @@ class FutureLienContractService {
       };
 
     } catch (error) {
-      console.error('Error cancelling future lien on-chain:', error);
+      logger.error('Error cancelling future lien on-chain:', error);
       
       // Log the error
       auditLogger.logAction(params.signerPublicKey, 'CONTRACT_CANCEL_FUTURE_LIEN_ERROR', null, {
@@ -319,7 +320,7 @@ class FutureLienContractService {
       };
 
     } catch (error) {
-      console.error('Error getting lien state from contract:', error);
+      logger.error('Error getting lien state from contract:', error);
       throw error;
     }
   }
@@ -361,7 +362,7 @@ class FutureLienContractService {
       };
 
     } catch (error) {
-      console.error('Error getting available release amount:', error);
+      logger.error('Error getting available release amount:', error);
       throw error;
     }
   }
@@ -441,7 +442,7 @@ class FutureLienContractService {
       };
 
     } catch (error) {
-      console.error('Error creating grant stream contract:', error);
+      logger.error('Error creating grant stream contract:', error);
       
       // Log the error
       auditLogger.logAction(params.ownerAddress, 'CONTRACT_CREATE_GRANT_STREAM_ERROR', null, {
@@ -488,7 +489,7 @@ class FutureLienContractService {
         isActive: Boolean(parsed.is_active)
       };
     } catch (error) {
-      console.error('Error parsing lien state:', error);
+      logger.error('Error parsing lien state:', error);
       throw new Error('Failed to parse lien state from contract result');
     }
   }
@@ -498,7 +499,7 @@ class FutureLienContractService {
     try {
       return Number(scVal.value());
     } catch (error) {
-      console.error('Error parsing number from ScVal:', error);
+      logger.error('Error parsing number from ScVal:', error);
       throw new Error('Failed to parse number from contract result');
     }
   }
@@ -517,7 +518,7 @@ class FutureLienContractService {
       // Check if it's a contract account (contracts typically have specific flags)
       return account && account.account_id === contractAddress;
     } catch (error) {
-      console.error('Contract address validation failed:', error);
+      logger.error('Contract address validation failed:', error);
       return false;
     }
   }
@@ -532,7 +533,7 @@ class FutureLienContractService {
       const latestLedger = await this.server.ledgers().limit(1).order('desc').call();
       return latestLedger.records[0].sequence;
     } catch (error) {
-      console.error('Error getting current ledger sequence:', error);
+      logger.error('Error getting current ledger sequence:', error);
       throw error;
     }
   }

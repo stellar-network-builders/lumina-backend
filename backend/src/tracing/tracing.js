@@ -7,6 +7,7 @@
 function initializeTracing() {
   let NodeSDK, getNodeAutoInstrumentations, OTLPTraceExporter, JaegerExporter, Resource, SemanticResourceAttributes;
   let TraceIdRatioBasedSampler, ParentBasedSampler;
+  let logger;
   try {
     ({ NodeSDK } = require('@opentelemetry/sdk-node'));
     ({ getNodeAutoInstrumentations } = require('@opentelemetry/auto-instrumentations-node'));
@@ -16,8 +17,11 @@ function initializeTracing() {
     ({ Resource } = require('@opentelemetry/resources'));
     ({ SemanticResourceAttributes } = require('@opentelemetry/semantic-conventions'));
     ({ TraceIdRatioBasedSampler, ParentBasedSampler } = require('@opentelemetry/sdk-trace-base'));
+    logger = require('../utils/logger');
   } catch (err) {
-    console.warn('OpenTelemetry tracing disabled (dependency unavailable):', err.message);
+    try { logger = require('../utils/logger'); } catch (_) {}
+    if (logger) logger.warn('OpenTelemetry tracing disabled (dependency unavailable):', err.message);
+    else logger.warn('OpenTelemetry tracing disabled (dependency unavailable):', err.message);
     return null;
   }
 
@@ -66,19 +70,19 @@ function initializeTracing() {
     // Initialize the SDK
     sdk.start();
 
-    console.log('🔍 OpenTelemetry tracing initialized');
+    logger.info('OpenTelemetry tracing initialized');
 
     // Graceful shutdown
     process.on('SIGTERM', () => {
       sdk.shutdown()
-        .then(() => console.log('🔍 OpenTelemetry tracing shut down'))
-        .catch((error) => console.error('Error shutting down OpenTelemetry', error))
+        .then(() => logger.info('OpenTelemetry tracing shut down'))
+        .catch((error) => logger.error('Error shutting down OpenTelemetry', error))
         .finally(() => process.exit(0));
     });
 
     return sdk;
   } catch (err) {
-    console.warn('OpenTelemetry tracing failed to start, continuing without it:', err.message);
+    logger.warn('OpenTelemetry tracing failed to start, continuing without it:', err.message);
     return null;
   }
 }

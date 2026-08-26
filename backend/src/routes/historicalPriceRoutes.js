@@ -4,6 +4,7 @@ const historicalPriceTrackingService = require('../services/historicalPriceTrack
 const { VestingMilestone, CostBasisReport, HistoricalTokenPrice } = require('../models');
 const { Op } = require('sequelize');
 const { paginateWithCursorAndCount, validateCursorParams } = require('../services/cursorPaginationService');
+const logger = require('../utils/logger');
 
 /**
  * Generate vesting milestones for a vault
@@ -48,7 +49,7 @@ router.post('/generate-milestones', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error generating milestones:', error);
+    logger.error('Error generating milestones:', error);
     res.status(500).json({ 
       error: 'Failed to generate vesting milestones',
       details: error.message 
@@ -82,7 +83,7 @@ router.get('/cost-basis/:userAddress/:tokenAddress/:year', async (req, res) => {
       data: report
     });
   } catch (error) {
-    console.error('Error generating cost basis report:', error);
+    logger.error('Error generating cost basis report:', error);
     res.status(500).json({ 
       error: 'Failed to generate cost basis report',
       details: error.message 
@@ -149,7 +150,7 @@ router.get('/milestones/:userAddress', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching milestones:', error);
+    logger.error('Error fetching milestones:', error);
     res.status(500).json({ 
       error: 'Failed to fetch vesting milestones',
       details: error.message 
@@ -195,7 +196,7 @@ router.get('/prices/:tokenAddress', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching historical prices:', error);
+    logger.error('Error fetching historical prices:', error);
     res.status(500).json({ 
       error: 'Failed to fetch historical prices',
       details: error.message 
@@ -231,7 +232,7 @@ router.post('/backfill', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error backfilling prices:', error);
+    logger.error('Error backfilling prices:', error);
     res.status(500).json({ 
       error: 'Failed to backfill prices',
       details: error.message 
@@ -279,7 +280,7 @@ router.get('/reports/:userAddress', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching cost basis reports:', error);
+    logger.error('Error fetching cost basis reports:', error);
     res.status(500).json({ 
       error: 'Failed to fetch cost basis reports',
       details: error.message 
@@ -314,7 +315,7 @@ router.get('/reports/:userAddress/:tokenAddress/:year/details', async (req, res)
       data: report.report_data
     });
   } catch (error) {
-    console.error('Error fetching detailed report:', error);
+    logger.error('Error fetching detailed report:', error);
     res.status(500).json({ 
       error: 'Failed to fetch detailed cost basis report',
       details: error.message 
@@ -344,7 +345,7 @@ router.get('/health', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Health check failed:', error);
+    logger.error('Health check failed:', error);
     res.status(500).json({ 
       success: false,
       status: 'unhealthy',

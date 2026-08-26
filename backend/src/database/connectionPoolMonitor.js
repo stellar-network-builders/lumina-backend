@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { buildAdaptiveConfig } = require('./poolConfig');
 
 let metricsService;
@@ -147,7 +148,7 @@ class ConnectionPoolMonitor {
       // Reset the window after acting so we observe fresh behaviour at the new size.
       this.window = [];
       this.applyResize(next);
-      console.log(
+      logger.info(
         `[db-pool] adaptive ${reason}: recommendedMax ${current} -> ${next} (avg pressure ${avg.toFixed(2)})`
       );
     }
@@ -160,7 +161,7 @@ class ConnectionPoolMonitor {
       try {
         this.resize(newMax, this.adaptive.floor);
       } catch (err) {
-        console.error('[db-pool] resize hook failed:', err.message);
+        logger.error('[db-pool] resize hook failed:', err.message);
       }
     }
   }
@@ -177,7 +178,7 @@ class ConnectionPoolMonitor {
       if (metricsService.dbPoolUtilization) metricsService.dbPoolUtilization.set(stats.utilization);
       if (metricsService.dbPoolMaxConnections) metricsService.dbPoolMaxConnections.set(stats.max);
     } catch (err) {
-      console.error('[db-pool] failed to update metrics:', err.message);
+      logger.error('[db-pool] failed to update metrics:', err.message);
     }
   }
 
@@ -200,11 +201,11 @@ class ConnectionPoolMonitor {
       try {
         this.tick();
       } catch (err) {
-        console.error('[db-pool] monitor tick failed:', err.message);
+        logger.error('[db-pool] monitor tick failed:', err.message);
       }
     }, this.sampleIntervalMs);
     if (this.timer.unref) this.timer.unref();
-    console.log(`[db-pool] connection pool monitor started (every ${this.sampleIntervalMs}ms)`);
+    logger.info(`[db-pool] connection pool monitor started (every ${this.sampleIntervalMs}ms)`);
   }
 
   stop() {

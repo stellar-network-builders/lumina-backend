@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { Client, GatewayIntentBits } = require('discord.js');
 const { Vault } = require('../models');
 
@@ -14,11 +15,11 @@ class DiscordBotService {
     this.isRunning = false;
 
     this.client.on('ready', () => {
-      console.log(`Discord bot logged in as ${this.client.user.tag}`);
+      logger.info(`Discord bot logged in as ${this.client.user.tag}`);
     });
 
     this.client.on('error', (error) => {
-      console.error('Discord bot error:', error);
+      logger.error('Discord bot error:', error);
     });
   }
 
@@ -39,7 +40,7 @@ class DiscordBotService {
 
       return totalTVL;
     } catch (error) {
-      console.error('Error calculating TVL:', error);
+      logger.error('Error calculating TVL:', error);
       return 0;
     }
   }
@@ -64,13 +65,13 @@ class DiscordBotService {
   async updateChannelTopic() {
     try {
       if (!this.channelId) {
-        console.warn('DISCORD_CHANNEL_ID not set, skipping channel topic update');
+        logger.warn('DISCORD_CHANNEL_ID not set, skipping channel topic update');
         return;
       }
 
       const channel = await this.client.channels.fetch(this.channelId);
       if (!channel) {
-        console.error(`Discord channel ${this.channelId} not found`);
+        logger.error(`Discord channel ${this.channelId} not found`);
         return;
       }
 
@@ -79,9 +80,9 @@ class DiscordBotService {
       const newTopic = `Current TVL: ${formattedTVL}`;
 
       await channel.setTopic(newTopic);
-      console.log(`Updated Discord channel topic to: ${newTopic}`);
+      logger.info(`Updated Discord channel topic to: ${newTopic}`);
     } catch (error) {
-      console.error('Error updating Discord channel topic:', error);
+      logger.error('Error updating Discord channel topic:', error);
     }
   }
 
@@ -91,13 +92,13 @@ class DiscordBotService {
   async start() {
     try {
       if (this.isRunning) {
-        console.log('Discord bot is already running');
+        logger.info('Discord bot is already running');
         return;
       }
 
       const token = process.env.DISCORD_BOT_TOKEN;
       if (!token) {
-        console.warn('DISCORD_BOT_TOKEN not set, Discord bot will not start');
+        logger.warn('DISCORD_BOT_TOKEN not set, Discord bot will not start');
         return;
       }
 
@@ -112,9 +113,9 @@ class DiscordBotService {
         this.updateChannelTopic();
       }, 3600000);
 
-      console.log('Discord bot started with hourly TVL updates');
+      logger.info('Discord bot started with hourly TVL updates');
     } catch (error) {
-      console.error('Error starting Discord bot:', error);
+      logger.error('Error starting Discord bot:', error);
     }
   }
 
@@ -133,9 +134,9 @@ class DiscordBotService {
       }
 
       this.isRunning = false;
-      console.log('Discord bot stopped');
+      logger.info('Discord bot stopped');
     } catch (error) {
-      console.error('Error stopping Discord bot:', error);
+      logger.error('Error stopping Discord bot:', error);
     }
   }
 }

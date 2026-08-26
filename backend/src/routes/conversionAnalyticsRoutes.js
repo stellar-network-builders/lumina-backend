@@ -4,6 +4,7 @@ const CostBasisCalculationService = require('../services/costBasisCalculationSer
 const ConversionEvent = require('../models/ConversionEvent');
 const authService = require('../services/authService');
 const { Op } = require('sequelize');
+const logger = require('../utils/logger');
 
 const costBasisService = new CostBasisCalculationService();
 
@@ -36,7 +37,7 @@ router.get(
       
       res.json(result);
     } catch (error) {
-      console.error('Error calculating cost basis:', error);
+      logger.error('Error calculating cost basis:', error);
       res.status(500).json({
         success: false,
         message: error.message
@@ -116,7 +117,7 @@ router.get(
         }
       });
     } catch (error) {
-      console.error('Error getting conversion history:', error);
+      logger.error('Error getting conversion history:', error);
       res.status(500).json({
         success: false,
         message: error.message
@@ -148,7 +149,7 @@ router.get(
       
       res.json(result);
     } catch (error) {
-      console.error('Error generating tax report:', error);
+      logger.error('Error generating tax report:', error);
       res.status(500).json({
         success: false,
         message: error.message
@@ -230,7 +231,7 @@ router.get(
         }
       });
     } catch (error) {
-      console.error('Error generating portfolio summary:', error);
+      logger.error('Error generating portfolio summary:', error);
       res.status(500).json({
         success: false,
         message: error.message
@@ -330,7 +331,7 @@ router.get(
         }
       });
     } catch (error) {
-      console.error('Error getting exchange rates:', error);
+      logger.error('Error getting exchange rates:', error);
       res.status(500).json({
         success: false,
         message: error.message
@@ -401,7 +402,7 @@ router.get(
         }
       });
     } catch (error) {
-      console.error('Error calculating gains and losses:', error);
+      logger.error('Error calculating gains and losses:', error);
       res.status(500).json({
         success: false,
         message: error.message
@@ -464,7 +465,7 @@ router.get(
         }
       });
     } catch (error) {
-      console.error('Error calculating performance metrics:', error);
+      logger.error('Error calculating performance metrics:', error);
       res.status(500).json({
         success: false,
         message: error.message

@@ -6,6 +6,7 @@
  * to claims when necessary for ongoing due diligence compliance.
  */
 
+const logger = require('../utils/logger');
 const cron = require('node-cron');
 const { KycStatus, KycNotification } = require('../models');
 const notificationService = require('./notificationService');
@@ -24,7 +25,7 @@ class KYCExpirationWorker {
    * Start the KYC expiration monitoring worker
    */
   start() {
-    console.log('🔍 Starting KYC Expiration Worker...');
+    logger.info('🔍 Starting KYC Expiration Worker...');
     
     // Run every 6 hours for proactive monitoring
     cron.schedule('0 */6 * * *', async () => {
@@ -41,8 +42,8 @@ class KYCExpirationWorker {
       await this.runCriticalCheck();
     });
 
-    console.log('✅ KYC Expiration Worker started successfully');
-    console.log('📅 Schedule: Every 6 hours, daily at 9 AM UTC, and hourly for critical cases');
+    logger.info('✅ KYC Expiration Worker started successfully');
+    logger.info('📅 Schedule: Every 6 hours, daily at 9 AM UTC, and hourly for critical cases');
   }
 
   /**
@@ -50,7 +51,7 @@ class KYCExpirationWorker {
    */
   async runExpirationCheck() {
     if (this.isRunning) {
-      console.log('⚠️ KYC worker already running, skipping this execution');
+      logger.info('⚠️ KYC worker already running, skipping this execution');
       return;
     }
 
@@ -59,18 +60,18 @@ class KYCExpirationWorker {
     this.processedUsers.clear();
 
     try {
-      console.log('🔍 Running KYC expiration check...');
+      logger.info('🔍 Running KYC expiration check...');
       
       const stats = await this.processExpiringUsers();
       
-      console.log('✅ KYC expiration check completed');
-      console.log(`📊 Results: ${stats.totalProcessed} users processed, ${stats.notificationsSent} notifications sent, ${stats.softLocksApplied} soft-locks applied`);
+      logger.info('✅ KYC expiration check completed');
+      logger.info(`📊 Results: ${stats.totalProcessed} users processed, ${stats.notificationsSent} notifications sent, ${stats.softLocksApplied} soft-locks applied`);
       
       // Send summary to Slack
       await this.sendSlackSummary(stats);
       
     } catch (error) {
-      console.error('❌ Error in KYC expiration check:', error);
+      logger.error('❌ Error in KYC expiration check:', error);
       Sentry.captureException(error, {
         tags: { operation: 'kycExpirationCheck' },
         extra: { lastRunTime: this.lastRunTime }
@@ -85,17 +86,17 @@ class KYCExpirationWorker {
    */
   async runDailyComplianceCheck() {
     try {
-      console.log('🔍 Running daily KYC compliance check...');
+      logger.info('🔍 Running daily KYC compliance check...');
       
       const stats = await this.processExpiringUsers({ isDailyCheck: true });
       
       // Generate compliance report
       await this.generateComplianceReport(stats);
       
-      console.log('✅ Daily KYC compliance check completed');
+      logger.info('✅ Daily KYC compliance check completed');
       
     } catch (error) {
-      console.error('❌ Error in daily compliance check:', error);
+      logger.error('❌ Error in daily compliance check:', error);
       Sentry.captureException(error, {
         tags: { operation: 'dailyComplianceCheck' }
       });
@@ -110,7 +111,7 @@ class KYCExpirationWorker {
       const criticalUsers = await KycStatus.findExpiringSoon(1);
       
       if (criticalUsers.length > 0) {
-        console.log(`🚨 Found ${criticalUsers.length} users with KYC expiring within 24 hours`);
+        logger.info(`🚨 Found ${criticalUsers.length} users with KYC expiring within 24 hours`);
         
         for (const user of criticalUsers) {
           if (!this.processedUsers.has(user.user_address)) {
@@ -121,7 +122,7 @@ class KYCExpirationWorker {
       }
       
     } catch (error) {
-      console.error('❌ Error in critical check:', error);
+      logger.error('❌ Error in critical check:', error);
       Sentry.captureException(error, {
         tags: { operation: 'criticalCheck' }
       });
@@ -156,7 +157,7 @@ class KYCExpirationWorker {
         this.processedUsers.add(user.user_address);
         stats.totalProcessed++;
       } catch (error) {
-        console.error(`❌ Error processing user ${user.user_address}:`, error);
+        logger.error(`❌ Error processing user ${user.user_address}:`, error);
         Sentry.captureException(error, {
           tags: { operation: 'processUserExpiration' },
           extra: { userAddress: user.user_address }
@@ -177,7 +178,7 @@ class KYCExpirationWorker {
         this.processedUsers.add(user.user_address);
         stats.totalProcessed++;
       } catch (error) {
-        console.error(`❌ Error processing expired user ${user.user_address}:`, error);
+        logger.error(`❌ Error processing expired user ${user.user_address}:`, error);
       }
     }
 
@@ -191,7 +192,7 @@ class KYCExpirationWorker {
     const daysUntilExpiration = user.days_until_expiration;
     const complianceStatus = user.getComplianceStatus();
 
-    console.log(`📋 Processing user ${user.user_address}: ${daysUntilExpiration} days until expiration`);
+    logger.info(`📋 Processing user ${user.user_address}: ${daysUntilExpiration} days until expiration`);
 
     // Determine urgency and action
     if (daysUntilExpiration <= 1) {
@@ -220,7 +221,7 @@ class KYCExpirationWorker {
    * Process critical expiration (within 24 hours)
    */
   async processCriticalExpiration(user) {
-    console.log(`🚨 CRITICAL: User ${user.user_address} KYC expires in ${user.days_until_expiration} days`);
+    logger.info(`🚨 CRITICAL: User ${user.user_address} KYC expires in ${user.days_until_expiration} days`);
     
     // Send urgent notification
     await this.sendNotification(user, 'EXPIRATION_WARNING', 'CRITICAL');
@@ -238,7 +239,7 @@ class KYCExpirationWorker {
    * Process high priority expiration (within 3 days)
    */
   async processHighPriorityExpiration(user) {
-    console.log(`⚠️ HIGH PRIORITY: User ${user.user_address} KYC expires in ${user.days_until_expiration} days`);
+    logger.info(`⚠️ HIGH PRIORITY: User ${user.user_address} KYC expires in ${user.days_until_expiration} days`);
     
     // Send high priority notification
     await this.sendNotification(user, 'EXPIRATION_WARNING', 'HIGH');
@@ -251,7 +252,7 @@ class KYCExpirationWorker {
    * Process warning expiration (within 7 days)
    */
   async processWarningExpiration(user) {
-    console.log(`📢 WARNING: User ${user.user_address} KYC expires in ${user.days_until_expiration} days`);
+    logger.info(`📢 WARNING: User ${user.user_address} KYC expires in ${user.days_until_expiration} days`);
     
     // Send warning notification
     await this.sendNotification(user, 'EXPIRATION_WARNING', 'MEDIUM');
@@ -261,7 +262,7 @@ class KYCExpirationWorker {
    * Process expired users
    */
   async processExpiredUser(user, stats) {
-    console.log(`❌ EXPIRED: User ${user.user_address} KYC expired on ${user.expiration_date}`);
+    logger.info(`❌ EXPIRED: User ${user.user_address} KYC expired on ${user.expiration_date}`);
     
     stats.expiredUsers++;
     
@@ -321,10 +322,10 @@ class KYCExpirationWorker {
       // Update user's notification history
       await user.addNotification(notificationType, template.title(user));
       
-      console.log(`📧 Sent ${notificationType} notification to user ${user.user_address}`);
+      logger.info(`📧 Sent ${notificationType} notification to user ${user.user_address}`);
       
     } catch (error) {
-      console.error(`❌ Error sending notification to user ${user.user_address}:`, error);
+      logger.error(`❌ Error sending notification to user ${user.user_address}:`, error);
       Sentry.captureException(error, {
         tags: { operation: 'sendNotification' },
         extra: { userAddress: user.user_address, notificationType }
@@ -360,7 +361,7 @@ class KYCExpirationWorker {
           deliveryStatus[channel] = 'skipped';
         }
       } catch (error) {
-        console.error(`❌ Failed to send ${channel} notification:`, error);
+        logger.error(`❌ Failed to send ${channel} notification:`, error);
         deliveryStatus[channel] = 'failed';
         notification.updateDeliveryStatus(channel, 'failed', error.message);
       }
@@ -377,7 +378,7 @@ class KYCExpirationWorker {
    */
   async sendEmailNotification(notification, user) {
     // Implementation would depend on your email service
-    console.log(`📧 Sending email notification to ${user.user_address}: ${notification.title}`);
+    logger.info(`📧 Sending email notification to ${user.user_address}: ${notification.title}`);
     // await emailService.sendKycNotification(user.user_address, notification);
   }
 
@@ -396,7 +397,7 @@ class KYCExpirationWorker {
         }
       });
     } catch (error) {
-      console.error(`❌ Failed to send push notification:`, error);
+      logger.error(`❌ Failed to send push notification:`, error);
       throw error;
     }
   }
@@ -406,7 +407,7 @@ class KYCExpirationWorker {
    */
   async sendSMSNotification(notification, user) {
     // Implementation would depend on your SMS service
-    console.log(`📱 Sending SMS notification to ${user.user_address}: ${notification.title}`);
+    logger.info(`📱 Sending SMS notification to ${user.user_address}: ${notification.title}`);
     // await smsService.sendKycNotification(user.user_address, notification);
   }
 
@@ -452,10 +453,10 @@ class KYCExpirationWorker {
       };
 
       await slackWebhookService.sendKycAlert(message);
-      console.log(`📨 Sent compliance alert for user ${user.user_address}`);
+      logger.info(`📨 Sent compliance alert for user ${user.user_address}`);
       
     } catch (error) {
-      console.error(`❌ Failed to send compliance alert:`, error);
+      logger.error(`❌ Failed to send compliance alert:`, error);
     }
   }
 
@@ -483,7 +484,7 @@ class KYCExpirationWorker {
       await slackWebhookService.sendKycSummary(message);
       
     } catch (error) {
-      console.error(`❌ Failed to send Slack summary:`, error);
+      logger.error(`❌ Failed to send Slack summary:`, error);
     }
   }
 
@@ -502,13 +503,13 @@ class KYCExpirationWorker {
       };
 
       // Store report or send to compliance team
-      console.log('📊 Generated compliance report:', report);
+      logger.info('📊 Generated compliance report:', report);
       
       // Send report to Slack
       await this.sendComplianceReport(report);
       
     } catch (error) {
-      console.error(`❌ Failed to generate compliance report:`, error);
+      logger.error(`❌ Failed to generate compliance report:`, error);
     }
   }
 
@@ -568,7 +569,7 @@ class KYCExpirationWorker {
       await slackWebhookService.sendKycReport(message);
       
     } catch (error) {
-      console.error(`❌ Failed to send compliance report:`, error);
+      logger.error(`❌ Failed to send compliance report:`, error);
     }
   }
 
@@ -625,9 +626,9 @@ class KYCExpirationWorker {
    * Stop the worker
    */
   stop() {
-    console.log('🛑 Stopping KYC Expiration Worker...');
+    logger.info('🛑 Stopping KYC Expiration Worker...');
     // In a real implementation, you would stop the cron jobs
-    console.log('✅ KYC Expiration Worker stopped');
+    logger.info('✅ KYC Expiration Worker stopped');
   }
 }
 

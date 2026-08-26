@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const path = require('path');
 const fs = require('fs');
 const QueueService = require('../services/queueService');
@@ -62,9 +63,9 @@ class BackgroundJobManager {
       }
 
       this.initialized = true;
-      console.log('BackgroundJobManager initialized');
+      logger.info('BackgroundJobManager initialized');
     } catch (error) {
-      console.error('BackgroundJobManager failed to initialize:', error.message);
+      logger.error('BackgroundJobManager failed to initialize:', error.message);
     }
   }
 
@@ -82,11 +83,11 @@ class BackgroundJobManager {
       if (job.attemptsMade >= attemptsAllowed) {
         try {
           await this.queueService.moveToDeadLetter(queueName, job, err);
-          console.error(
+          logger.error(
             `[${queueName}] job ${job.id} exhausted ${attemptsAllowed} attempts → moved to DLQ`
           );
         } catch (dlqErr) {
-          console.error(`[${queueName}] failed to route job ${job.id} to DLQ:`, dlqErr.message);
+          logger.error(`[${queueName}] failed to route job ${job.id} to DLQ:`, dlqErr.message);
         }
       }
     });

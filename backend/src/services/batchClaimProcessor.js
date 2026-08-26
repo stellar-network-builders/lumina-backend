@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { sequelize } = require('../database/connection');
 const AutoClaimConsent = require('../models/autoClaimConsent');
 const Beneficiary = require('../models/beneficiary');
@@ -117,7 +118,7 @@ class BatchClaimProcessor {
 
           results.totalProcessed++;
         } catch (error) {
-          console.error(`Error processing claim for ${beneficiaryAddress}:`, error);
+          logger.error(`Error processing claim for ${beneficiaryAddress}:`, error);
           results.failed.push({
             beneficiaryAddress,
             error: error.message
@@ -137,7 +138,7 @@ class BatchClaimProcessor {
       return results;
     } catch (error) {
       await transaction.rollback();
-      console.error('Batch claim processing error:', error);
+      logger.error('Batch claim processing error:', error);
       throw error;
     }
   }
@@ -239,7 +240,7 @@ class BatchClaimProcessor {
         claim
       };
     } catch (error) {
-      console.error('Individual claim processing error:', error);
+      logger.error('Individual claim processing error:', error);
       return {
         success: false,
         error: error.message
